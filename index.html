@@ -110,8 +110,33 @@
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px 18px;font-family:"IBM Plex Mono",monospace;font-size:12px}
   .grid .s{color:var(--muted)} .grid .s b{color:var(--chalk);font-weight:600}
   .grid .s.mut{color:var(--muted2)}
-  .why{font-size:13px;color:var(--chalk);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:11px 13px;margin-top:6px;line-height:1.55}
+  .why{font-size:13.5px;color:var(--chalk);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:11px 13px;margin-top:6px;line-height:1.55}
   .why .k{color:var(--amber)}
+  .drv{display:flex;gap:10px;margin:9px 0}
+  .drv .dot{margin-top:5px;flex:0 0 8px}
+  .drv-h{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--chalk)}
+  .drv-h b{font-weight:600}
+  .drv-t{font-size:13px;color:var(--muted);line-height:1.45;margin-top:1px}
+  .keynums{display:flex;flex-direction:column;gap:0}
+  .kn{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .kn:last-child{border-bottom:0}
+  .kn .kl{font-size:13px;color:var(--chalk)}
+  .kn .kh{display:block;font-size:11px;color:var(--muted2);margin-top:1px}
+  .kn .kv{font-family:"IBM Plex Mono",monospace;font-size:15px;font-weight:600;color:var(--chalk);white-space:nowrap}
+  .kn .kv.amber{color:var(--amber)}
+  .morebtn{background:transparent;border:1px solid var(--line);color:var(--muted);cursor:pointer;font-family:"IBM Plex Mono",monospace;font-size:11.5px;padding:7px 11px;border-radius:var(--radius);margin-top:12px}
+  .morebtn:hover{color:var(--chalk);border-color:var(--muted)}
+  .moreblock{display:none;margin-top:10px}
+  .moreblock.open{display:block}
+  .explainer{margin-top:14px}
+  .explainer button{background:transparent;border:1px solid var(--line);color:var(--amber);cursor:pointer;font-family:"IBM Plex Mono",monospace;font-size:12px;padding:8px 12px;border-radius:var(--radius)}
+  .explainer button:hover{filter:brightness(1.1)}
+  .explainer .panel{display:none;margin-top:12px;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+  .explainer .panel.open{display:block}
+  .explainer .panel h4{margin:0 0 6px;font-family:"Archivo",sans-serif;font-size:15px;font-stretch:92%}
+  .explainer .panel p{margin:0 0 10px;font-size:13.5px;color:var(--muted);line-height:1.55}
+  .explainer .panel p b{color:var(--chalk);font-weight:600}
+  .explainer .panel .tip{color:var(--clay)}
 
   footer{margin-top:40px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:12.5px;line-height:1.6}
   footer .caveat{max-width:80ch}
@@ -129,7 +154,20 @@
   <header>
     <div class="eyebrow">Ensemble hit-probability model · MLB Stats API + Open-Meteo</div>
     <h1>Hit <span class="acc">Board</span></h1>
-    <p class="sub">The 10 batters most likely to record a hit on the slate. Tap any card to see why. The score blends contact skill, the opposing pitcher, the lefty/righty platoon edge, park &amp; conditions, recent form, and matchup history — with weather and day/night shown as context. Read the footer before you trust the number.</p>
+    <p class="sub">The 10 batters most likely to record a hit on the slate. Tap any card to see why, in plain English. The score weighs contact skill, the opposing pitcher, the lefty/righty matchup, the park, weather, recent form, and a Statcast luck check. Read the footer before you trust the number.</p>
+
+    <div class="explainer">
+      <button id="howBtn" aria-expanded="false">How this works ▾</button>
+      <div class="panel" id="howPanel">
+        <h4>What the numbers mean</h4>
+        <p><b>Hit score</b> — our estimate of the chance this batter gets at least one hit today. Treat it as a ranking, not a betting line: it runs a few points high, so use it to compare players, not to price a bet.</p>
+        <p><b>Contact skill</b> — the foundation. A batter who gets a hit in 30% of at-bats (a .300 average) starts much higher than a .240 hitter. This is most of the score.</p>
+        <p><b>Statcast luck check (xBA)</b> — expected batting average from how hard and where he hits the ball. If his real average is higher than his xBA, he's been a bit lucky and we trim him; if lower, he's been unlucky and we bump him.</p>
+        <p><b>Pitcher &amp; platoon</b> — a pitcher who gives up lots of hits raises the score; a tough one lowers it. We also use how the batter hits that pitcher's hand (lefty vs righty), which is a real, repeatable edge.</p>
+        <p><b>Park, weather &amp; form</b> — hitter-friendly parks and warm air nudge it up; recent form is a small factor because hot streaks mostly just reflect good hitters. Batter-vs-pitcher history is shown but barely counted — the samples are too small to trust.</p>
+        <p class="tip">The thing that matters most isn't any stat: it's whether he's actually in the lineup. Cards say <b>Confirmed</b> or <b>Projected</b>. Lineups firm up 1–3 hours before first pitch. Not betting advice.</p>
+      </div>
+    </div>
 
     <div class="controls">
       <div class="field">
@@ -227,6 +265,7 @@ els("f-minpa").addEventListener("input",e=>{F.minPA=+e.target.value;els("v-minpa
 els("f-confirmed").addEventListener("change",e=>F.confirmedOnly=e.target.checked);
 els("f-weather").addEventListener("change",e=>F.weather=e.target.checked);
 els("toggleDrawer").addEventListener("click",()=>{const d=els("drawer");const o=d.classList.toggle("open");els("toggleDrawer").textContent=o?"Tune & filter ▴":"Tune & filter ▾";});
+els("howBtn").addEventListener("click",()=>{const p=els("howPanel");const o=p.classList.toggle("open");els("howBtn").setAttribute("aria-expanded",o);els("howBtn").textContent=o?"How this works ▴":"How this works ▾";});
 
 (function(){const d=new Date();els("date").value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);})();
 
@@ -428,35 +467,72 @@ function renderSlate(n,conf,lg,wx){
 const pct=x=>(x*100).toFixed(1)+"%";
 const signed=x=>{const v=x*100;return (v>=0?"+":"")+v.toFixed(1);};
 
+function relSplit(c){return c.oppHand==="L"?c.vsL:c.oppHand==="R"?c.vsR:null;}
+const DLABEL={pit:"Pitcher matchup",xba:"Luck check (xBA)",plat:"Platoon (L/R)",env:"Park & weather",form:"Recent form",bvp:"Matchup history"};
+const DCOLOR={pit:"var(--clay)",xba:"var(--xba)",plat:"var(--plat)",env:"var(--env)",form:"var(--form)",bvp:"var(--bvp)"};
+function driverText(key,c,lg){
+  if(key==="pit"){if(!c.oppPitcher)return null;const oa=c.oppPitcher.oppAVG;const nm=c.oppPitcherName||"This pitcher";
+    return oa>=lg?`${nm} gives up a lot of hits this year (${oa.toFixed(3)} allowed vs ${lg.toFixed(3)} league), so the matchup helps.`:`${nm} is tough, holding hitters to ${oa.toFixed(3)} (league is ${lg.toFixed(3)}), so the matchup works against him.`;}
+  if(key==="xba"){if(c.xba==null)return null;return c.xba<c.avg?`His contact quality (xBA ${c.xba.toFixed(3)}) is below his ${c.avg.toFixed(3)} average — he's been a little lucky, so we trim the score.`:`His contact quality (xBA ${c.xba.toFixed(3)}) beats his ${c.avg.toFixed(3)} average — he's been unlucky, so we nudge the score up.`;}
+  if(key==="plat"){const sp=relSplit(c);if(!sp)return null;const hand=c.oppHand==="L"?"left-handed":"right-handed";return sp.avg>=c.avg?`He hits ${hand} pitching well (${sp.avg.toFixed(3)}), and today's starter is ${hand} — a matchup edge.`:`He hits ${hand} pitching worse (${sp.avg.toFixed(3)}) than usual, and today's starter is ${hand} — a tougher day.`;}
+  if(key==="env"){const p=[];if(c.parkF>1.01)p.push("a hitter-friendly park");else if(c.parkF<0.99)p.push("a pitcher-friendly park");if(c.wx&&!c.wx.roof&&typeof c.wx.temp==="number"){if(c.wx.temp>=85)p.push("warm air that helps the ball carry");else if(c.wx.temp<=50)p.push("cold air that suppresses offense");}if(c.wx&&c.wx.roof)p.push("a climate-controlled roof");return p.length?`Playing in ${p.join(" and ")}.`:`Park and weather are close to neutral today.`;}
+  if(key==="form"){if(c.recentAVG==null)return null;return c.recentAVG>=c.avg?`He's swinging a hot bat lately (${c.recentAVG.toFixed(3)} over his last ${c.recentGames} games).`:`He's been a bit cold lately (${c.recentAVG.toFixed(3)} over his last ${c.recentGames} games).`;}
+  if(key==="bvp"){if(c.bvpAB<5)return null;return `He's ${c.bvpH}-for-${c.bvpAB} against this pitcher in his career — too small a sample to mean much, so it's barely counted.`;}
+  return null;
+}
+
 function render(top,lg){
   const board=els("board");board.innerHTML="";
   top.forEach((c,i)=>{
     const cn=c.contrib;
+    // ---- breakdown bar (kept, but tucked into "show all") ----
     const segs=[{v:cn.skill,col:"var(--grass-dim)"},{v:cn.xba,col:"var(--xba)"},{v:cn.pit,col:"var(--clay)"},{v:cn.plat,col:"var(--plat)"},{v:cn.env,col:"var(--env)"},{v:cn.form,col:"var(--form)"},{v:cn.bvp,col:"var(--bvp)"}];
     const total=segs.reduce((a,s)=>a+Math.abs(s.v),0)||1;
     const track=segs.map(s=>{const w=Math.abs(s.v)/total*100;if(w<0.4)return"";const col=s.v<0?"var(--clay-dim)":s.col;return `<i style="width:${w}%;background:${col}"></i>`;}).join("");
-    const legend=[["Skill","var(--grass-dim)",cn.skill,false],["xBA","var(--xba)",cn.xba,true],["Pitcher","var(--clay)",cn.pit,true],["Platoon","var(--plat)",cn.plat,true],["Park/cond","var(--env)",cn.env,true],["Form","var(--form)",cn.form,true],["BvP","var(--bvp)",cn.bvp,true]]
-      .map(([lab,col,v,d])=>{const cls=d?(v>0?"delta pos":(v<0?"delta neg":"delta")):"delta";return `<span><i class="dot" style="background:${col}"></i>${lab} <b class="${cls}">${d?signed(v):pct(v)}</b></span>`;}).join("");
 
+    // ---- collapsed chips: only what matters at a glance ----
     const chips=[];
-    chips.push(c.confirmed?`<span class="chip green">Confirmed${c.slot?` · bats ${c.slot}`:""}</span>`:`<span class="chip warn">Projected</span>`);
-    if(c.oppHand){const sp=c.oppHand==="L"?c.vsL:c.vsR;chips.push(`<span class="chip">vs ${c.oppHand}HP · <b>${sp?sp.avg.toFixed(3):"—"}</b></span>`);}
+    chips.push(c.confirmed?`<span class="chip green">Confirmed${c.slot?` · bats ${c.slot}`:""}</span>`:`<span class="chip warn">Projected lineup</span>`);
+    if(c.wx&&!c.wx.roof&&c.wx.precip!=null&&c.wx.precip>=50)chips.push(`<span class="chip rain">⚠ Rain-out risk ${c.wx.precip}%</span>`);
+    if(c.xba!=null&&c.xba>0){const d=c.xba-c.avg;if(d>=0.012)chips.push(`<span class="chip xba">▲ been unlucky</span>`);else if(d<=-0.012)chips.push(`<span class="chip xba">▼ been lucky</span>`);}
+    if(c.pa<120)chips.push(`<span class="chip warn">Small sample</span>`);
+
+    // ---- "why he's here" plain sentence ----
+    const drivers=["pit","plat","env","form","xba","bvp"].map(k=>({k,v:cn[k]||0,t:driverText(k,c,lg)}))
+      .filter(d=>d.t&&Math.abs(d.v)>0.002).sort((a,b)=>Math.abs(b.v)-Math.abs(a.v));
+    const lineupBit=c.confirmed?(c.slot?`batting ${c.slot==1?"leadoff":c.slot+"th"}`:"in the lineup"):"projected to play";
+    const why=`<b>${c.name}</b> gets a hit in about <span class="k">${Math.round(c.avg*100)}%</span> of his at-bats and is ${lineupBit}, so he should bat around <span class="k">${expPA(c).toFixed(1)}</span> times. ${drivers[0]?"The biggest factor beyond that: "+driverText(drivers[0].k,c,lg).charAt(0).toLowerCase()+driverText(drivers[0].k,c,lg).slice(1):""}`;
+
+    // ---- top 3 drivers, written out ----
+    const drvHtml=drivers.slice(0,3).map(d=>`<div class="drv"><span class="dot" style="background:${DCOLOR[d.k]}"></span><div><div class="drv-h"><b>${DLABEL[d.k]}</b> <span class="delta ${d.v>0?"pos":"neg"}">${signed(d.v)} pts</span></div><div class="drv-t">${d.t}</div></div></div>`).join("");
+
+    // ---- key numbers, labeled, relevant only ----
+    const sp=relSplit(c);
+    const kn=[];
+    kn.push(`<div class="kn"><span class="kl">Batting average<span class="kh">how often he gets a hit per at-bat</span></span><span class="kv amber">${c.avg.toFixed(3)}</span></div>`);
+    if(c.xba!=null&&c.xba>0)kn.push(`<div class="kn"><span class="kl">Expected average (xBA)<span class="kh">what his contact quality should earn — luck removed</span></span><span class="kv">${c.xba.toFixed(3)}</span></div>`);
+    if(sp)kn.push(`<div class="kn"><span class="kl">vs ${c.oppHand==="L"?"left":"right"}-handers<span class="kh">how he hits pitchers like today's starter</span></span><span class="kv">${sp.avg.toFixed(3)}</span></div>`);
+    if(c.recentAVG!=null)kn.push(`<div class="kn"><span class="kl">Last ${c.recentGames} games<span class="kh">recent form</span></span><span class="kv">${c.recentAVG.toFixed(3)}</span></div>`);
+    if(c.oppPitcher)kn.push(`<div class="kn"><span class="kl">Pitcher allows<span class="kh">${c.oppPitcherName||"opponent"}'s batting average against</span></span><span class="kv">${c.oppPitcher.oppAVG.toFixed(3)}</span></div>`);
+
+    // ---- full line (hidden behind "show all stats") ----
     const dnAvg=c.dn==="day"?c.dayAVG:c.nightAVG;
-    chips.push(`<span class="chip"><span class="dn">${c.dn}</span> · <b>${dnAvg!=null?dnAvg.toFixed(3):"—"}</b></span>`);
-    if(c.wx&&c.wx.roof)chips.push(`<span class="chip">Roof · climate</span>`);
-    else if(c.wx&&typeof c.wx.temp==="number"){chips.push(`<span class="chip">${c.wx.temp}°F · ${c.wx.wind}mph</span>`);
-      if(c.wx.precip!=null&&c.wx.precip>=50)chips.push(`<span class="chip rain">⚠ Rain-out risk ${c.wx.precip}%</span>`);}
-    if(c.xba!=null&&c.xba>0){const d=c.xba-c.avg;const tag=d>=0.012?`<span class="chip xba">xBA <b>${c.xba.toFixed(3)}</b> ▲ unlucky</span>`:d<=-0.012?`<span class="chip xba">xBA <b>${c.xba.toFixed(3)}</b> ▼ lucky</span>`:`<span class="chip xba">xBA <b>${c.xba.toFixed(3)}</b></span>`;chips.push(tag);}
-    if(c.streak&&c.streak>=3)chips.push(`<span class="chip amber">${c.streak}-game hit streak</span>`);
-    if(c.bvpAB>=5)chips.push(`<span class="chip flag">BvP ${c.bvpH}-${c.bvpAB} (noise)</span>`);
-    if(c.pa<120)chips.push(`<span class="chip warn">Small sample ${c.pa}PA</span>`);
+    const fullGrid=`<div class="grid">
+      <span class="s">AVG <b>${c.avg.toFixed(3)}</b></span>
+      ${c.xba!=null&&c.xba>0?`<span class="s">xBA <b>${c.xba.toFixed(3)}</b></span>`:""}
+      <span class="s">OBP <b>${(c.obp||0).toFixed(3)}</b></span>
+      <span class="s">OPS <b>${(c.ops||0).toFixed(3)}</b></span>
+      <span class="s">K% <b>${(c.kRate*100).toFixed(0)}%</b></span>
+      <span class="s">PA <b>${c.pa}</b></span>
+      ${c.vsL?`<span class="s">vs LHP <b>${c.vsL.avg.toFixed(3)}</b></span>`:""}
+      ${c.vsR?`<span class="s">vs RHP <b>${c.vsR.avg.toFixed(3)}</b></span>`:""}
+      ${dnAvg!=null?`<span class="s mut">${c.dn==="day"?"Day":"Night"} <b>${dnAvg.toFixed(3)}</b></span>`:""}
+      ${c.recentAVG!=null?`<span class="s">L${c.recentGames} <b>${c.recentAVG.toFixed(3)}</b></span>`:""}
+      <span class="s">Park <b>${c.parkF.toFixed(2)}</b></span>
+      ${c.oppPitcher?`<span class="s">Opp AVG-ag <b>${c.oppPitcher.oppAVG.toFixed(3)}</b></span>`:""}
+    </div>`;
 
-    const drivers=[["the matchup vs "+(c.oppPitcherName||"opp"),cn.pit],["the L/R platoon edge",cn.plat],["park & conditions",cn.env],["recent form",cn.form]]
-      .filter(d=>Math.abs(d[1])>0.002).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));
-    const topDriver=drivers[0]?` Biggest mover beyond raw skill: <span class="k">${drivers[0][0]}</span> (${signed(drivers[0][1])} pts).`:"";
-    const why=`A <span class="k">${c.avg.toFixed(3)}</span> hitter projected for ${expPA(c).toFixed(1)} plate appearances.${topDriver}`;
-
-    const oppLine=c.oppPitcherName?`${c.isHome?"vs":"@"} ${c.oppAbbr} · <span class="vs">${c.oppPitcherName}</span>${c.oppHand?` <span class="hand">(${c.oppHand}HP)</span>`:""}`:`${c.isHome?"vs":"@"} ${c.oppAbbr} · <span class="vs">pitcher TBD</span>`;
+    const oppLine=c.oppPitcherName?`${c.isHome?"vs":"@"} ${c.oppAbbr} · <span class="vs">${c.oppPitcherName}</span>${c.oppHand?` <span class="hand">(${c.oppHand==="L"?"LHP":"RHP"})</span>`:""}`:`${c.isHome?"vs":"@"} ${c.oppAbbr} · <span class="vs">pitcher TBD</span>`;
 
     const card=document.createElement("div");card.className="card"+(i<3?" top3":"");
     card.innerHTML=`
@@ -468,29 +544,25 @@ function render(top,lg){
       <div class="chips">${chips.join("")}</div>
       <div class="detail">
         <div class="why">${why}</div>
-        <h5>Ensemble breakdown</h5>
-        <div class="ens"><div class="track">${track}</div><div class="legend">${legend}</div></div>
-        <h5>Full line</h5>
-        <div class="grid">
-          <span class="s">AVG <b>${c.avg.toFixed(3)}</b></span>
-          ${c.xba!=null&&c.xba>0?`<span class="s">xBA <b>${c.xba.toFixed(3)}</b></span>`:""}
-          <span class="s">OBP <b>${(c.obp||0).toFixed(3)}</b></span>
-          <span class="s">OPS <b>${(c.ops||0).toFixed(3)}</b></span>
-          <span class="s">K% <b>${(c.kRate*100).toFixed(0)}%</b></span>
-          <span class="s">PA <b>${c.pa}</b></span>
-          ${c.vsL?`<span class="s">vs LHP <b>${c.vsL.avg.toFixed(3)}</b></span>`:""}
-          ${c.vsR?`<span class="s">vs RHP <b>${c.vsR.avg.toFixed(3)}</b></span>`:""}
-          ${c.dayAVG?`<span class="s mut">Day <b>${c.dayAVG.toFixed(3)}</b></span>`:""}
-          ${c.nightAVG?`<span class="s mut">Night <b>${c.nightAVG.toFixed(3)}</b></span>`:""}
-          ${c.recentAVG!=null?`<span class="s">L${c.recentGames} <b>${c.recentAVG.toFixed(3)}</b></span>`:""}
-          <span class="s">Park <b>${c.parkF.toFixed(2)}</b></span>
-          ${c.oppPitcher?`<span class="s">Opp AVG-ag <b>${c.oppPitcher.oppAVG.toFixed(3)}</b></span>`:""}
+        ${drvHtml?`<h5>What's moving the score</h5>${drvHtml}`:""}
+        <h5>Key numbers</h5>
+        <div class="keynums">${kn.join("")}</div>
+        <button class="morebtn">Show all stats &amp; full breakdown ▾</button>
+        <div class="moreblock">
+          <h5>Ensemble breakdown</h5>
+          <div class="ens"><div class="track">${track}</div>
+            <div class="legend">${[["Skill","var(--grass-dim)",cn.skill,false],["xBA","var(--xba)",cn.xba,true],["Pitcher","var(--clay)",cn.pit,true],["Platoon","var(--plat)",cn.plat,true],["Park/wx","var(--env)",cn.env,true],["Form","var(--form)",cn.form,true],["BvP","var(--bvp)",cn.bvp,true]].map(([lab,col,v,d])=>{const cls=d?(v>0?"delta pos":(v<0?"delta neg":"delta")):"delta";return `<span><i class="dot" style="background:${col}"></i>${lab} <b class="${cls}">${d?signed(v):pct(v)}</b></span>`;}).join("")}</div>
+          </div>
+          <h5>Full line</h5>
+          ${fullGrid}
         </div>
       </div>`;
     const head=card.querySelector(".head");
     const toggle=()=>{const o=card.classList.toggle("open");head.setAttribute("aria-expanded",o);};
     head.addEventListener("click",toggle);
     head.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();}});
+    const mb=card.querySelector(".morebtn"),blk=card.querySelector(".moreblock");
+    mb.addEventListener("click",e=>{e.stopPropagation();const o=blk.classList.toggle("open");mb.textContent=o?"Hide stats & breakdown ▴":"Show all stats & full breakdown ▾";});
     board.appendChild(card);
   });
 }
