@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Live Box — Hit Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,600;0,800;0,900&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c1620; --bg2:#10202c; --panel:#13252f; --line:#27414e;
+    --chalk:#eef3f0; --muted:#8aa3a8; --muted2:#6f8a90;
+    --grass:#46c27a; --grass-dim:#2c7d53;
+    --clay:#e08b4c; --clay-dim:#b5683a;
+    --amber:#ffce5c; --live:#ff5d5d; --radius:6px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:radial-gradient(1200px 600px at 50% -200px,#18323f 0%,var(--bg) 60%) fixed,var(--bg);color:var(--chalk);font-family:"Inter",system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 18px 80px}
+
+  header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:20px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+  h1{font-family:"Archivo",sans-serif;font-weight:900;font-size:clamp(30px,6vw,52px);line-height:.92;letter-spacing:-.02em;margin:8px 0 6px;font-stretch:90%}
+  h1 .acc{color:var(--amber)}
+  .sub{color:var(--muted);max-width:64ch;font-size:14px}
+
+  .bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:18px}
+  a.back{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--amber);text-decoration:none;border:1px solid #7a6326;padding:9px 12px;border-radius:var(--radius)}
+  a.back:hover{filter:brightness(1.1)}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);cursor:pointer;font-family:"IBM Plex Mono",monospace;font-size:12px;padding:9px 12px;border-radius:var(--radius)}
+  button.ghost:hover{color:var(--chalk);border-color:var(--muted)}
+  button.ghost.on{color:var(--grass);border-color:var(--grass-dim)}
+  .meta{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted2);margin-left:auto}
+  :focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+  .proxyrow{display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+  .proxyrow.open{display:flex}
+  .proxyrow label{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+  .proxyrow input[type=text]{background:var(--bg2);border:1px solid var(--line);color:var(--chalk);font-family:"IBM Plex Mono",monospace;font-size:13px;padding:8px 10px;border-radius:var(--radius);min-width:260px}
+
+  .status{margin:30px 0;padding:22px;border:1px dashed var(--line);border-radius:var(--radius);color:var(--muted);font-size:14px}
+  .status.err{border-color:var(--clay-dim);color:#f1c7a8}
+  .status code{font-family:"IBM Plex Mono",monospace;color:var(--chalk);background:var(--bg2);padding:1px 6px;border-radius:4px}
+  .status a{color:var(--amber)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;margin-top:8px}
+  .card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px;position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--line)}
+  .card.hit::before{background:var(--grass)}
+  .card.hitless::before{background:var(--clay-dim)}
+  .card.livenow::before{background:var(--live)}
+
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .nm{font-family:"Archivo",sans-serif;font-weight:800;font-size:18px;letter-spacing:-.01em;font-stretch:92%;line-height:1.1}
+  .mu{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);margin-top:3px}
+  .pill{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.04em;padding:3px 8px;border-radius:20px;border:1px solid var(--line);color:var(--muted);white-space:nowrap;flex-shrink:0}
+  .pill.live{color:#fff;border-color:var(--live);background:rgba(255,93,93,.16)}
+  .pill.live .dotlive{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--live);margin-right:5px;vertical-align:middle;animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .pill.final{color:var(--muted2)}
+  .pill.pre{color:var(--amber);border-color:#7a6326}
+  .pill.off{color:var(--clay);border-color:var(--clay-dim)}
+
+  .result{display:flex;align-items:baseline;gap:10px;margin:14px 0 10px}
+  .result .big{font-family:"Archivo",sans-serif;font-weight:900;font-size:26px;font-stretch:85%;line-height:1}
+  .result.hit .big{color:var(--grass)}
+  .result.hitless .big{color:var(--clay)}
+  .result.idle .big{color:var(--muted2)}
+  .result .lab{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+  .atbat{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--amber)}
+
+  .line{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;border-top:1px solid var(--line);padding-top:10px}
+  .line .b{text-align:center}
+  .line .b .k{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.08em;color:var(--muted2);text-transform:uppercase}
+  .line .b .v{font-family:"IBM Plex Mono",monospace;font-size:16px;font-weight:600;color:var(--chalk);margin-top:1px}
+  .line .b .v.hot{color:var(--grass)}
+  .xtra{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);margin-top:9px;min-height:14px}
+  .xtra b{color:var(--amber);font-weight:600}
+  .score-badge{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--muted2);margin-top:8px}
+
+  footer{margin-top:40px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted2);font-size:12px;line-height:1.6}
+  @media (prefers-reduced-motion:reduce){.pill.live .dotlive{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Live per-player box scores</div>
+    <h1>Live <span class="acc">Box</span></h1>
+    <p class="sub">Each card tracks one batter from your board — just that player's line, updating while their game is live. Green rail means they've recorded a hit. Build the board first so there's something to follow.</p>
+    <div class="bar">
+      <a class="back" href="index.html">← Board</a>
+      <button class="ghost" id="refresh">Refresh now</button>
+      <button class="ghost on" id="auto">Auto-refresh: on</button>
+      <button class="ghost" id="toggleProxy">Proxy</button>
+      <span class="meta" id="meta"></span>
+    </div>
+    <div class="proxyrow" id="proxyrow">
+      <label><input type="checkbox" id="useProxy"> Route through CORS proxy</label>
+      <input type="text" id="proxyUrl" placeholder="https://your-proxy/?url=" />
+      <button class="ghost" id="saveProxy">Save</button>
+    </div>
+  </header>
+
+  <div id="status" class="status">Loading your tracked players…</div>
+  <div class="grid" id="grid"></div>
+
+  <footer>Game state and scores come from the MLB schedule; batting lines from each game's box score. Players who didn't start show as Did not start. A postponed game kills any bet on that player — watch the rail color and pill.</footer>
+</div>
+
+<script>
+"use strict";
+const DIRECT_BASE="https://statsapi.mlb.com";
+const els=id=>document.getElementById(id);
+
+/* ---- proxy (shared with board via localStorage) ---- */
+let PROXY={use:false,prefix:""};
+try{const p=JSON.parse(localStorage.getItem("hitboard.proxy")||"{}");if(p&&typeof p==="object"){PROXY.use=!!p.use;PROXY.prefix=p.prefix||"";}}catch(e){}
+els("useProxy").checked=PROXY.use; els("proxyUrl").value=PROXY.prefix;
+const FN="/.netlify/functions/mlb";
+async function api(path){
+  try{const r=await fetch(FN+"?path="+encodeURIComponent(path));if(r.ok)return await r.json();}catch(e){}
+  const full=PROXY.use&&PROXY.prefix?PROXY.prefix+encodeURIComponent(DIRECT_BASE+path):DIRECT_BASE+path;
+  const r=await fetch(full,{headers:{accept:"application/json"}});
+  if(!r.ok)throw new Error("HTTP "+r.status);
+  return r.json();
+}
+els("toggleProxy").addEventListener("click",()=>els("proxyrow").classList.toggle("open"));
+els("saveProxy").addEventListener("click",()=>{
+  PROXY.use=els("useProxy").checked;PROXY.prefix=els("proxyUrl").value.trim();
+  localStorage.setItem("hitboard.proxy",JSON.stringify(PROXY));
+  els("proxyrow").classList.remove("open");refresh();
+});
+
+/* ---- load tracked board ---- */
+let TRACKED=[],DATE="";
+try{TRACKED=JSON.parse(localStorage.getItem("hitboard.tracked")||"[]");}catch(e){TRACKED=[];}
+DATE=localStorage.getItem("hitboard.date")||new Date().toISOString().slice(0,10);
+
+let timer=null, AUTO=true;
+els("auto").addEventListener("click",()=>{
+  AUTO=!AUTO;els("auto").textContent="Auto-refresh: "+(AUTO?"on":"off");els("auto").classList.toggle("on",AUTO);
+  if(AUTO)refresh();else if(timer){clearTimeout(timer);timer=null;}
+});
+els("refresh").addEventListener("click",refresh);
+
+function setStatus(html,err){const s=els("status");s.style.display="block";s.className="status"+(err?" err":"");s.innerHTML=html;}
+function hideStatus(){els("status").style.display="none";}
+
+/* pick the most relevant game for a team (live > final > preview) */
+function pickGame(games){
+  if(!games||!games.length)return null;
+  const rank=g=>{const s=g.status?.abstractGameState;return s==="Live"?0:s==="Final"?1:2;};
+  return games.slice().sort((a,b)=>rank(a)-rank(b))[0];
+}
+
+async function pool(items,fn,conc=5){
+  const out=new Array(items.length);let i=0;
+  async function w(){while(i<items.length){const k=i++;try{out[k]=await fn(items[k],k);}catch(e){out[k]=null;}}}
+  await Promise.all(Array.from({length:Math.min(conc,items.length)},w));return out;
+}
+
+async function refresh(){
+  if(timer){clearTimeout(timer);timer=null;}
+  if(!TRACKED.length){
+    setStatus("No tracked players yet. Head to the <a href='index.html'>board</a>, build it, then come back — your top 10 will appear here automatically.");
+    return;
+  }
+  try{
+    const sched=await api(`/api/v1/schedule?sportId=1&date=${DATE}&hydrate=linescore,team`);
+    const games=sched.dates?.[0]?.games||[];
+    // teamId -> [games]
+    const byTeam={};
+    for(const g of games){
+      for(const side of ["home","away"]){const tid=g.teams[side].team.id;(byTeam[tid]=byTeam[tid]||[]).push(g);}
+    }
+    // resolve each tracked player's game
+    let anyLive=false;
+    const need=new Set();
+    for(const p of TRACKED){
+      const g=pickGame(byTeam[p.teamId]);
+      p._game=g||null;
+      if(g){ if(g.status?.abstractGameState==="Live")anyLive=true;
+        if(g.status?.abstractGameState!=="Preview")need.add(g.gamePk); }
+    }
+    // fetch boxscores for live/final games once each
+    const pks=[...need];
+    const boxes={};
+    await pool(pks,async pk=>{ boxes[pk]=await api(`/api/v1/game/${pk}/boxscore`); },5);
+
+    hideStatus();
+    render(boxes);
+
+    const liveN=TRACKED.filter(p=>p._game?.status?.abstractGameState==="Live").length;
+    const finalN=TRACKED.filter(p=>p._game?.status?.abstractGameState==="Final").length;
+    els("meta").textContent=`${TRACKED.length} tracked · ${liveN} live · ${finalN} final · updated ${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"})}`;
+
+    if(AUTO && anyLive){ timer=setTimeout(refresh,30000); }
+    else if(AUTO && !anyLive && finalN<TRACKED.length){ timer=setTimeout(refresh,120000); } // pregame: slow poll
+  }catch(e){
+    console.error(e);
+    setStatus("Couldn't reach the MLB Stats API. If the board page needed a CORS proxy, click <b>Proxy</b> above, enter the same prefix, and save.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
+  }
+}
+
+function findBatting(box,playerId){
+  if(!box)return null;
+  const key="ID"+playerId;
+  for(const side of ["home","away"]){
+    const pl=box.teams?.[side]?.players?.[key];
+    if(pl)return {batting:pl.stats?.batting||{},order:pl.battingOrder,gs:pl.gameStatus||{},seq:pl.position};
+  }
+  return null;
+}
+
+function gamePill(g){
+  if(!g)return `<span class="pill off">No game</span>`;
+  const st=g.status?.abstractGameState, det=g.status?.detailedState||"";
+  if(/postpon|suspend|cancel/i.test(det))return `<span class="pill off">${det}</span>`;
+  if(st==="Live"){
+    const ls=g.linescore||{};const half=ls.inningState||"";const ord=ls.currentInningOrdinal||"";
+    return `<span class="pill live"><span class="dotlive"></span>${(half+" "+ord).trim()||"Live"}</span>`;
+  }
+  if(st==="Final")return `<span class="pill final">Final</span>`;
+  // preview
+  const t=g.gameDate?new Date(g.gameDate).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"";
+  return `<span class="pill pre">${t||"Scheduled"}</span>`;
+}
+
+function render(boxes){
+  const grid=els("grid");grid.innerHTML="";
+  TRACKED.forEach((p,i)=>{
+    const g=p._game;
+    const st=g?.status?.abstractGameState;
+    const started=st==="Live"||st==="Final";
+    const box=g?boxes[g.gamePk]:null;
+    const info=started?findBatting(box,p.id):null;
+    const b=info?.batting||{};
+    const ab=+b.atBats||0, h=+b.hits||0, r=+b.runs||0, rbi=+b.rbi||0, bb=+b.baseOnBalls||0, k=+b.strikeOuts||0;
+    const xbh=[]; if(+b.doubles)xbh.push((+b.doubles)+"x2B"); if(+b.triples)xbh.push((+b.triples)+"x3B"); if(+b.homeRuns)xbh.push((+b.homeRuns)+"xHR");
+    const inLineup = info!=null && (info.order || ab>0 || h>0 || bb>0 || k>0);
+
+    // result classification
+    let rcls="idle", rbig="—", rlab="awaiting first pitch", cardCls="";
+    if(g && /postpon|suspend|cancel/i.test(g.status?.detailedState||"")){ rcls="idle"; rbig="—"; rlab=g.status.detailedState; }
+    else if(started && info && !inLineup){ rcls="idle"; rbig="DNP"; rlab="did not start"; }
+    else if(started && !info){ rcls="idle"; rbig="DNP"; rlab="not in box score"; }
+    else if(started){
+      if(h>=1){ rcls="hit"; rbig="✓ HIT"; rlab=h+(h>1?" hits":" hit")+" · "+h+"-for-"+ab; cardCls="hit"; }
+      else if(ab>0){ rcls="hitless"; rbig="0-for-"+ab; rlab="no hit yet"; cardCls="hitless"; }
+      else { rcls="idle"; rbig="—"; rlab=bb?"walked, no AB":"no at-bats yet"; }
+    }
+    if(st==="Live") cardCls=cardCls||"livenow";
+    if(st==="Live" && h>=1) cardCls="hit";
+
+    // current at-bat / on base note
+    let atbat="";
+    if(st==="Live" && info?.gs){ if(info.gs.isCurrentBatter)atbat="● at bat now"; else if(info.gs.isOnBase)atbat="◆ on base"; }
+
+    const scoreLine = g && started ? `${g.teams.away.team.abbreviation||"AWY"} ${g.teams.away.score??0} – ${g.teams.home.score??0} ${g.teams.home.team.abbreviation||"HOM"}` : "";
+
+    const card=document.createElement("div");
+    card.className="card"+(cardCls?(" "+cardCls):"");
+    card.innerHTML=`
+      <div class="top">
+        <div>
+          <div class="nm">${i+1}. ${p.name}</div>
+          <div class="mu">${p.teamAbbr} ${p.isHome?"vs":"@"} ${p.oppAbbr}</div>
+        </div>
+        ${gamePill(g)}
+      </div>
+      <div class="result ${rcls}">
+        <span class="big">${rbig}</span>
+        <span class="lab">${rlab}</span>
+        ${atbat?`<span class="atbat" style="margin-left:auto">${atbat}</span>`:""}
+      </div>
+      <div class="line">
+        <div class="b"><div class="k">AB</div><div class="v">${ab}</div></div>
+        <div class="b"><div class="k">H</div><div class="v ${h>0?"hot":""}">${h}</div></div>
+        <div class="b"><div class="k">R</div><div class="v">${r}</div></div>
+        <div class="b"><div class="k">RBI</div><div class="v">${rbi}</div></div>
+        <div class="b"><div class="k">BB</div><div class="v">${bb}</div></div>
+        <div class="b"><div class="k">K</div><div class="v">${k}</div></div>
+      </div>
+      <div class="xtra">${xbh.length?("XBH: <b>"+xbh.join(", ")+"</b>"):(scoreLine||"&nbsp;")}</div>
+      ${scoreLine&&xbh.length?`<div class="score-badge">${scoreLine}</div>`:""}
+      <div class="score-badge">Hit score ${(p.hitScore*100).toFixed(1)}% · ${p.confirmed?("confirmed"+(p.slot?(" · bats "+p.slot):"")):"projected"}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+refresh();
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# Static site + serverless function. No build step needed.
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"

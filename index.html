@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hit Board — MLB hit-probability ensemble</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,600;0,800;0,900&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c1620; --bg2:#10202c; --panel:#13252f; --line:#27414e;
+    --chalk:#eef3f0; --muted:#8aa3a8; --muted2:#6f8a90;
+    --grass:#46c27a; --grass-dim:#2c7d53;
+    --clay:#e08b4c; --clay-dim:#b5683a;
+    --amber:#ffce5c;
+    --bvp:#7aa7ff; --form:#c98bff; --plat:#5fd0d8; --env:#9bd06a; --xba:#ff9ecb;
+    --danger:#ff6b6b; --radius:6px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:radial-gradient(1200px 600px at 50% -200px,#18323f 0%,var(--bg) 60%) fixed,var(--bg);
+    color:var(--chalk);font-family:"Inter",system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 18px 80px}
+
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:22px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+  h1{font-family:"Archivo",sans-serif;font-weight:900;font-size:clamp(34px,7vw,60px);line-height:.92;letter-spacing:-.02em;margin:8px 0 6px;font-stretch:90%}
+  h1 .acc{color:var(--amber)}
+  .sub{color:var(--muted);max-width:64ch;font-size:14.5px}
+
+  .controls{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin:22px 0 6px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  input[type=date],input[type=text]{background:var(--bg2);border:1px solid var(--line);color:var(--chalk);font-family:"IBM Plex Mono",monospace;font-size:14px;padding:9px 11px;border-radius:var(--radius)}
+  input[type=text]{min-width:240px}
+  button.run{background:var(--amber);color:#1a1306;border:none;cursor:pointer;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em;padding:11px 22px;border-radius:var(--radius);font-stretch:90%}
+  button.run:hover{filter:brightness(1.06)}
+  button.run:disabled{opacity:.5;cursor:wait}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);cursor:pointer;font-family:"IBM Plex Mono",monospace;font-size:12px;padding:9px 12px;border-radius:var(--radius)}
+  button.ghost:hover{color:var(--chalk);border-color:var(--muted)}
+  :focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+  .drawer{display:none;flex-direction:column;gap:16px;margin-top:14px;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+  .drawer.open{display:flex}
+  .drawer h4{margin:0 0 2px;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .wkrow{display:flex;gap:18px;flex-wrap:wrap}
+  .wk{display:flex;flex-direction:column;gap:4px;min-width:150px;flex:1}
+  .wk .top{display:flex;justify-content:space-between;font-size:12px}
+  .wk .nm{font-family:"IBM Plex Mono",monospace;letter-spacing:.04em}
+  .wk .vv{color:var(--amber);font-family:"IBM Plex Mono",monospace}
+  .wk small{color:var(--muted2);font-size:11px;line-height:1.3}
+  input[type=range]{width:100%;accent-color:var(--amber)}
+  .filters{display:flex;gap:18px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line);padding-top:14px}
+  .filters label{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+  .filters input[type=range]{width:120px}
+  .proxyrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:12px}
+  .proxyrow label{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+
+  .slate{display:flex;gap:22px;flex-wrap:wrap;margin:18px 0 4px;font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--muted)}
+  .slate b{color:var(--chalk);font-weight:600}
+
+  .status{margin:34px 0;padding:22px;border:1px dashed var(--line);border-radius:var(--radius);color:var(--muted);font-size:14px}
+  .status.err{border-color:var(--clay-dim);color:#f1c7a8}
+  .status code{font-family:"IBM Plex Mono",monospace;color:var(--chalk);background:var(--bg2);padding:1px 6px;border-radius:4px}
+  .bar-load{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:14px}
+  .bar-load i{display:block;height:100%;width:30%;background:var(--amber);animation:slide 1.1s ease-in-out infinite}
+  @keyframes slide{0%{margin-left:-30%}100%{margin-left:100%}}
+
+  .board{display:flex;flex-direction:column;gap:11px;margin-top:8px}
+  .card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;position:relative}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--grass-dim);z-index:1}
+  .card.top3::before{background:var(--amber)}
+
+  .head{display:grid;grid-template-columns:50px 1fr auto;gap:14px;align-items:center;padding:14px 18px;cursor:pointer}
+  .rank{font-family:"Archivo",sans-serif;font-weight:900;font-size:38px;line-height:1;color:var(--line);font-stretch:75%}
+  .card.top3 .rank{color:var(--amber)}
+  .who .nm{font-family:"Archivo",sans-serif;font-weight:800;font-size:19px;letter-spacing:-.01em;font-stretch:92%}
+  .who .matchup{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--muted);margin-top:2px}
+  .who .matchup .vs{color:var(--clay)}
+  .who .matchup .hand{color:var(--plat)}
+  .score{text-align:right;display:flex;align-items:center;gap:12px}
+  .score .num{font-family:"Archivo",sans-serif;font-weight:900;font-size:30px;color:var(--amber);font-stretch:85%;line-height:1}
+  .score .lab{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .chev{color:var(--muted2);font-size:13px;transition:transform .15s;font-family:"IBM Plex Mono",monospace}
+  .card.open .chev{transform:rotate(90deg)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 18px 14px 64px}
+  .chip{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.03em;padding:3px 9px;border-radius:20px;border:1px solid var(--line);color:var(--muted);display:inline-flex;gap:6px;align-items:center}
+  .chip b{color:var(--chalk);font-weight:600}
+  .chip.green{color:var(--grass);border-color:var(--grass-dim)}
+  .chip.amber{color:var(--amber);border-color:#7a6326}
+  .chip.warn{color:var(--clay);border-color:var(--clay-dim)}
+  .chip.rain{color:#7fb6ff;border-color:#3a5587}
+  .chip.flag{color:var(--bvp);border-color:#3a5587}
+  .chip.xba{color:var(--xba);border-color:#8a4d6b}
+  .chip .dn{opacity:.7}
+
+  .detail{display:none;padding:4px 18px 18px 64px;border-top:1px solid var(--line);margin-top:2px}
+  .card.open .detail{display:block}
+  .detail h5{margin:14px 0 8px;font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2)}
+  .ens .track{height:10px;border-radius:5px;background:var(--bg);border:1px solid var(--line);display:flex;overflow:hidden}
+  .ens .track i{height:100%;display:block}
+  .ens .legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:9px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted)}
+  .ens .legend span{display:inline-flex;align-items:center;gap:5px}
+  .dot{width:8px;height:8px;border-radius:2px;display:inline-block}
+  .delta{color:var(--muted)} .delta.pos{color:var(--grass)} .delta.neg{color:var(--clay)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px 18px;font-family:"IBM Plex Mono",monospace;font-size:12px}
+  .grid .s{color:var(--muted)} .grid .s b{color:var(--chalk);font-weight:600}
+  .grid .s.mut{color:var(--muted2)}
+  .why{font-size:13px;color:var(--chalk);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:11px 13px;margin-top:6px;line-height:1.55}
+  .why .k{color:var(--amber)}
+
+  footer{margin-top:40px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:12.5px;line-height:1.6}
+  footer .caveat{max-width:80ch}
+  footer b{color:var(--clay)}
+  a{color:var(--amber)}
+  @media (max-width:580px){
+    .head{grid-template-columns:36px 1fr auto;gap:10px;padding:12px 14px}
+    .rank{font-size:28px}.score .num{font-size:24px}
+    .chips{padding-left:50px}.detail{padding-left:50px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Ensemble hit-probability model · MLB Stats API + Open-Meteo</div>
+    <h1>Hit <span class="acc">Board</span></h1>
+    <p class="sub">The 10 batters most likely to record a hit on the slate. Tap any card to see why. The score blends contact skill, the opposing pitcher, the lefty/righty platoon edge, park &amp; conditions, recent form, and matchup history — with weather and day/night shown as context. Read the footer before you trust the number.</p>
+
+    <div class="controls">
+      <div class="field">
+        <label for="date">Slate date</label>
+        <input type="date" id="date" />
+      </div>
+      <button class="run" id="run">Build the board</button>
+      <button class="ghost" id="toggleDrawer">Tune &amp; filter ▾</button>
+      <a class="ghost" id="liveLink" href="live.html" style="text-decoration:none;display:inline-flex;align-items:center">Live box scores →</a>
+    </div>
+
+    <div class="drawer" id="drawer">
+      <div>
+        <h4>Signal weights — how much each moves the score</h4>
+        <div class="wkrow">
+          <div class="wk"><div class="top"><span class="nm" style="color:var(--clay)">Pitcher</span><span class="vv" id="v-pit">0.60</span></div><input type="range" id="w-pit" min="0" max="1" step="0.05" value="0.60"><small>Opponent AVG-against vs league. Strong real signal.</small></div>
+          <div class="wk"><div class="top"><span class="nm" style="color:var(--plat)">Platoon L/R</span><span class="vv" id="v-plat">0.45</span></div><input type="range" id="w-plat" min="0" max="1" step="0.05" value="0.45"><small>Batter's AVG vs the pitcher's hand. The biggest split that matters.</small></div>
+          <div class="wk"><div class="top"><span class="nm" style="color:var(--env)">Park &amp; conditions</span><span class="vv" id="v-env">0.50</span></div><input type="range" id="w-env" min="0" max="1" step="0.05" value="0.50"><small>Hit park factor × a small temperature nudge.</small></div>
+          <div class="wk"><div class="top"><span class="nm" style="color:var(--form)">Recent form</span><span class="vv" id="v-form">0.25</span></div><input type="range" id="w-form" min="0" max="1" step="0.05" value="0.25"><small>Last-15 AVG vs season. Mostly noise — kept small.</small></div>
+          <div class="wk"><div class="top"><span class="nm" style="color:var(--bvp)">Batter vs pitcher</span><span class="vv" id="v-bvp">0.10</span></div><input type="range" id="w-bvp" min="0" max="1" step="0.05" value="0.10"><small>Career H/AB vs this arm. Near-zero predictive value.</small></div>
+          <div class="wk"><div class="top"><span class="nm" style="color:var(--xba)">Statcast xBA</span><span class="vv" id="v-xba">0.50</span></div><input type="range" id="w-xba" min="0" max="1" step="0.05" value="0.50"><small>How much to trust expected AVG over actual. Regresses out luck. Needs the function.</small></div>
+        </div>
+      </div>
+      <div class="filters">
+        <h4 style="width:100%">Filters</h4>
+        <label><input type="checkbox" id="f-confirmed"> Confirmed lineups only</label>
+        <label>Min PA <span id="v-minpa" style="color:var(--amber)">120</span><input type="range" id="f-minpa" min="0" max="400" step="20" value="120"></label>
+        <label><input type="checkbox" id="f-weather" checked> Pull weather</label>
+      </div>
+      <div class="proxyrow">
+        <label><input type="checkbox" id="useProxy"> Route MLB calls through CORS proxy</label>
+        <input type="text" id="proxyUrl" placeholder="https://your-proxy/?url=  (only if direct fetch is blocked)" />
+      </div>
+    </div>
+
+    <div class="slate" id="slate" style="display:none"></div>
+  </header>
+
+  <div id="status" class="status">Pick a date and build the board. Lineups firm up ~1–3 hours before first pitch — earlier than that you get projected pools, flagged on each card. Weather only loads for today and the next ~16 days.</div>
+  <div class="board" id="board"></div>
+
+  <footer>
+    <p class="caveat"><b>Read this.</b> This is a heuristic ranking score, not a true probability — it runs a few points hot, so use it to <i>order</i> hitters, not to price a bet. Contact skill drives most of the number; everything else is a nudge. <b>Platoon and pitcher quality are the real signals.</b> <b>Batter-vs-pitcher samples are statistically meaningless</b> at the sizes that exist and are weighted near zero. <b>Day/night splits are shown but not scored</b> — they're mostly noise. <b>Weather barely affects hit frequency</b>; its real use here is the rain-out flag, since a postponed game kills the bet. The single most important input is whether the player actually starts — cards are tagged Confirmed or Projected. Sportsbooks price hit props efficiently, so a high score usually means a known favorite, not value; the edge is in the mismatch the line missed, not the name at the top. Data: MLB Stats API + Open-Meteo (both free). Not betting advice.</p>
+  </footer>
+</div>
+
+<script>
+"use strict";
+const DIRECT_BASE="https://statsapi.mlb.com";
+const els=id=>document.getElementById(id);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+
+function base(){
+  if(els("useProxy").checked && els("proxyUrl").value.trim()) return {proxy:true,prefix:els("proxyUrl").value.trim()};
+  return {proxy:false,prefix:""};
+}
+const FN="/.netlify/functions/mlb";
+async function api(path){
+  // 1) Netlify function (CORS-safe, also unlocks Savant). Falls back if not deployed.
+  try{const r=await fetch(FN+"?path="+encodeURIComponent(path));if(r.ok)return await r.json();}catch(e){}
+  // 2) user proxy or direct fetch
+  const b=base();
+  const full=b.proxy?b.prefix+encodeURIComponent(DIRECT_BASE+path):DIRECT_BASE+path;
+  const r=await fetch(full,{headers:{accept:"application/json"}});
+  if(!r.ok) throw new Error("HTTP "+r.status+" on "+path);
+  return r.json();
+}
+async function loadSavant(season){
+  try{
+    const r=await fetch(FN+"?savant=expected&year="+season);
+    if(!r.ok)return new Map();
+    const arr=await r.json();const m=new Map();
+    for(const p of arr){if(p&&p.id)m.set(p.id,p);}
+    return m;
+  }catch(e){return new Map();}
+}
+
+const PARK={115:1.10,113:1.04,110:1.01,111:1.05,118:1.03,109:1.02,140:1.02,143:1.02,108:1.01,142:1.01,141:1.01,120:1.01,144:1.00,147:1.00,117:1.00,112:1.00,138:1.00,134:1.00,119:0.99,158:0.99,145:0.99,121:0.99,116:0.99,114:0.98,139:0.98,133:0.98,146:0.97,137:0.96,135:0.96,136:0.95};
+const COORD={108:[33.80,-117.88],109:[33.45,-112.07],110:[39.28,-76.62],111:[42.35,-71.10],112:[41.95,-87.66],113:[39.10,-84.51],114:[41.50,-81.69],115:[39.76,-104.99],116:[42.34,-83.05],117:[29.76,-95.36],118:[39.05,-94.48],119:[34.07,-118.24],120:[38.87,-77.01],121:[40.76,-73.85],133:[38.58,-121.51],134:[40.45,-80.01],135:[32.71,-117.16],136:[47.59,-122.33],137:[37.78,-122.39],138:[38.62,-90.19],139:[27.77,-82.65],140:[32.75,-97.08],141:[43.64,-79.39],142:[44.98,-93.28],143:[39.91,-75.17],144:[33.89,-84.47],145:[41.83,-87.63],146:[25.78,-80.22],147:[40.83,-73.93],158:[43.03,-87.97]};
+const ROOFED=new Set([109,117,136,140,141,146,158,139]);
+const parkFactor=id=>PARK[id]??1.00;
+const PA_BY_SLOT={1:4.7,2:4.6,3:4.5,4:4.4,5:4.3,6:4.1,7:4.0,8:3.9,9:3.8};
+
+async function pool(items,fn,conc=5){
+  const out=new Array(items.length);let i=0;
+  async function w(){while(i<items.length){const k=i++;try{out[k]=await fn(items[k],k);}catch(e){out[k]=null;}}}
+  await Promise.all(Array.from({length:Math.min(conc,items.length)},w));return out;
+}
+
+const W={pit:0.60,plat:0.45,env:0.50,form:0.25,bvp:0.10,xba:0.50};
+const F={confirmedOnly:false,minPA:120,weather:true};
+function bindSlider(id,key,vid,fmt=v=>v.toFixed(2)){const s=els(id),v=els(vid);s.addEventListener("input",()=>{W[key]=parseFloat(s.value);v.textContent=fmt(parseFloat(s.value));});}
+bindSlider("w-pit","pit","v-pit");bindSlider("w-plat","plat","v-plat");bindSlider("w-env","env","v-env");bindSlider("w-form","form","v-form");bindSlider("w-bvp","bvp","v-bvp");bindSlider("w-xba","xba","v-xba");
+els("f-minpa").addEventListener("input",e=>{F.minPA=+e.target.value;els("v-minpa").textContent=e.target.value;});
+els("f-confirmed").addEventListener("change",e=>F.confirmedOnly=e.target.checked);
+els("f-weather").addEventListener("change",e=>F.weather=e.target.checked);
+els("toggleDrawer").addEventListener("click",()=>{const d=els("drawer");const o=d.classList.toggle("open");els("toggleDrawer").textContent=o?"Tune & filter ▴":"Tune & filter ▾";});
+
+(function(){const d=new Date();els("date").value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);})();
+
+function setStatus(html,err=false,loading=false){const s=els("status");s.style.display="block";s.className="status"+(err?" err":"");s.innerHTML=html+(loading?'<div class="bar-load"><i></i></div>':"");}
+function clearStatus(){els("status").style.display="none";}
+
+els("run").addEventListener("click",run);
+async function run(){
+  const btn=els("run");btn.disabled=true;btn.textContent="Working…";
+  els("board").innerHTML="";els("slate").style.display="none";
+  const date=els("date").value, season=date.slice(0,4);
+  try{
+    setStatus("Pulling the schedule…",false,true);
+    const sched=await api(`/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher,lineups,team`);
+    const games=sched.dates?.[0]?.games||[];
+    if(!games.length){setStatus("No MLB games on <code>"+date+"</code>. Regular season runs late March through September.");return finish(btn);}
+
+    setStatus("Loading league hitting + pitching lines…",false,true);
+    const [hitMap,lgAVG]=await loadHitting(season);
+    const pitMap=await loadPitching(season);
+    const savantMap=await loadSavant(season);
+    for(const [id,line] of hitMap){const s=savantMap.get(id);line.xba=s?s.xba:null;line.xwoba=s?s.xwoba:null;}
+
+    const today=new Date();today.setHours(0,0,0,0);
+    const isFuture=(new Date(date+"T00:00")>=today);
+    let wxByGame={};
+    if(F.weather && isFuture){
+      setStatus("Checking conditions…",false,true);
+      await pool(games,async g=>{ wxByGame[g.gamePk]=await loadWeather(g); },5);
+    }
+
+    const cands=[];let confirmedGames=0;
+    for(const g of games){
+      const home=g.teams.home.team, away=g.teams.away.team, pf=parkFactor(home.id);
+      const wx=wxByGame[g.gamePk]||null;
+      const dn=(g.dayNight||"").toLowerCase()==="day"?"day":"night";
+      const hPP=g.teams.home.probablePitcher, aPP=g.teams.away.probablePitcher;
+      const lu=g.lineups, has=lu&&((lu.homePlayers?.length||0)+(lu.awayPlayers?.length||0)>0);
+      if(has)confirmedGames++;
+      const ctx={pf,wx,dn,roof:ROOFED.has(home.id),gamePk:g.gamePk};
+      addSide(cands,hitMap,pitMap,lu?.homePlayers,home,away,aPP,ctx,has,true);
+      addSide(cands,hitMap,pitMap,lu?.awayPlayers,away,home,hPP,ctx,has,false);
+    }
+    if(!cands.length){setStatus("Found "+games.length+" games but no batters with usable season stats yet.",true);return finish(btn);}
+
+    let pool0=cands.filter(c=>c.pa>=F.minPA && (!F.confirmedOnly||c.confirmed));
+    if(!pool0.length)pool0=cands;
+    for(const c of pool0)scoreBase(c,lgAVG);
+    pool0.sort((a,b)=>b.pBase-a.pBase);
+    const shortlist=pool0.slice(0,28);
+
+    setStatus("Enriching shortlist — platoon splits, recent form, matchup history…",false,true);
+    await pool(shortlist,async c=>{
+      await enrichSplits(c,season);
+      await enrichForm(c,season);
+      if(c.oppPitcherId)await enrichBvP(c,season);
+      scoreFinal(c,lgAVG);
+    },5);
+    for(const c of pool0)if(c.pFinal==null)scoreFinal(c,lgAVG);
+
+    pool0.sort((a,b)=>b.pFinal-a.pFinal);
+    const top=pool0.slice(0,10);
+    clearStatus();renderSlate(games.length,confirmedGames,lgAVG,F.weather&&isFuture);render(top,lgAVG);
+    persistBoard(top,date);
+  }catch(e){
+    console.error(e);
+    setStatus("Couldn't reach the MLB Stats API — most likely the browser blocking the cross-origin request (CORS).<br><br>1. Open <b>Tune &amp; filter ▾</b>, tick <code>Route MLB calls through CORS proxy</code>, paste a proxy prefix.<br>2. Better: deploy a tiny Netlify Function so it's same-origin and CORS can't bite. Ask me for it.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
+  }
+  finish(btn);
+}
+function finish(btn){btn.disabled=false;btn.textContent="Build the board";}
+
+function persistBoard(top,date){
+  try{
+    const tracked=top.map(c=>({id:c.id,name:c.name,teamAbbr:c.teamAbbr,oppAbbr:c.oppAbbr,teamId:c.teamId,
+      gamePk:c.gamePk,isHome:c.isHome,hitScore:c.pFinal,confirmed:c.confirmed,slot:c.slot}));
+    localStorage.setItem("hitboard.tracked",JSON.stringify(tracked));
+    localStorage.setItem("hitboard.date",date);
+    localStorage.setItem("hitboard.builtAt",new Date().toISOString());
+    localStorage.setItem("hitboard.proxy",JSON.stringify({use:els("useProxy").checked,prefix:els("proxyUrl").value.trim()}));
+  }catch(e){}
+}
+
+async function loadHitting(season){
+  const j=await api(`/api/v1/stats?stats=season&group=hitting&season=${season}&gameType=R&sportId=1&playerPool=All&limit=3000`);
+  const splits=j.stats?.[0]?.splits||[];const map=new Map();let H=0,AB=0;
+  for(const s of splits){const st=s.stat||{},ab=+st.atBats||0,h=+st.hits||0;
+    const pa=+st.plateAppearances||(ab+(+st.baseOnBalls||0)+(+st.hitByPitch||0)+(+st.sacFlies||0)+(+st.sacBunts||0));
+    if(ab<5)continue;H+=h;AB+=ab;
+    map.set(s.player.id,{id:s.player.id,name:s.player.fullName,teamId:s.team?.id,pos:s.player.primaryPosition?.abbreviation,
+      bats:s.player.batSide?.code,avg:+st.avg||(h/Math.max(ab,1)),obp:+st.obp||0,slg:+st.slg||0,ops:+st.ops||0,
+      ab,h,pa:pa||ab,k:+st.strikeOuts||0,kRate:pa?(+st.strikeOuts||0)/pa:0});}
+  return [map, AB?H/AB:0.245];
+}
+async function loadPitching(season){
+  const j=await api(`/api/v1/stats?stats=season&group=pitching&season=${season}&gameType=R&sportId=1&playerPool=All&limit=3000`);
+  const splits=j.stats?.[0]?.splits||[];const map=new Map();
+  for(const s of splits){const st=s.stat||{};
+    map.set(s.player.id,{id:s.player.id,name:s.player.fullName,hand:s.player.pitchHand?.code,
+      oppAVG:+st.avg||0,whip:+st.whip||0,era:+st.era||0,k9:+st.strikeoutsPer9Inn||0,bf:+st.battersFaced||0});}
+  return map;
+}
+async function loadWeather(g){
+  try{
+    const id=g.teams.home.team.id;const c=COORD[id];if(!c)return null;
+    if(ROOFED.has(id))return {roof:true};
+    const d=(g.gameDate||"").slice(0,10);
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=${c[0]}&longitude=${c[1]}&hourly=temperature_2m,precipitation_probability,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&start_date=${d}&end_date=${d}`;
+    const r=await fetch(u);if(!r.ok)return null;const j=await r.json();
+    const H=j.hourly;if(!H||!H.time)return null;
+    const gt=new Date(g.gameDate).getTime();let bi=0,bd=1e15;
+    H.time.forEach((t,i)=>{const dd=Math.abs(new Date(t).getTime()-gt);if(dd<bd){bd=dd;bi=i;}});
+    return {roof:false,temp:Math.round(H.temperature_2m[bi]),wind:Math.round(H.wind_speed_10m[bi]),precip:H.precipitation_probability?.[bi]??null};
+  }catch(e){return null;}
+}
+
+function addSide(out,hitMap,pitMap,players,team,opp,oppPP,ctx,confirmed,isHome){
+  const oppPid=oppPP?.id, oppPname=oppPP?.fullName, oppLine=oppPid?pitMap.get(oppPid):null;
+  const oppHand=oppLine?.hand || oppPP?.pitchHand?.code || null;
+  const mk=(line,slot)=>({...line,teamAbbr:team.abbreviation||team.name,oppAbbr:opp.abbreviation||opp.name,isHome,gamePk:ctx.gamePk,
+    oppPitcherId:oppPid,oppPitcherName:oppPname,oppPitcher:oppLine,oppHand,
+    parkF:ctx.pf,wx:ctx.wx,dn:ctx.dn,roof:ctx.roof,slot,confirmed,
+    vsL:null,vsR:null,dayAVG:null,nightAVG:null,recentAVG:null,recentGames:0,streak:null,bvpAB:0,bvpH:0,
+    pBase:null,pFinal:null,contrib:null});
+  if(confirmed&&players?.length){players.forEach((p,i)=>{const l=hitMap.get(p.id);if(l)out.push(mk(l,i+1));});}
+  else{for(const l of hitMap.values()){if(l.teamId!==team.id||l.pos==="P"||l.pa<30)continue;out.push(mk(l,null));}}
+}
+
+const perPA=c=>clamp(c.h/Math.max(c.pa,1),0.05,0.42);
+const expPA=c=>c.slot?(PA_BY_SLOT[c.slot]||4.2):4.3;
+const probFrom=(p,pa)=>1-Math.pow(1-p,pa);
+function envFactor(c){
+  let f=c.parkF;
+  if(c.wx&&!c.wx.roof&&typeof c.wx.temp==="number") f*=clamp(1+(c.wx.temp-70)*0.0015,0.97,1.04);
+  return f;
+}
+function scoreBase(c,lg){
+  let p=perPA(c);const pa=expPA(c);const p0=probFrom(p,pa);
+  // Statcast xBA correction: blend expected AVG with actual to regress out luck
+  let pX=p;
+  if(c.xba!=null&&c.xba>0&&c.avg>0){const trueAVG=W.xba*c.xba+(1-W.xba)*c.avg;const rel=clamp(trueAVG/c.avg,0.80,1.20);pX=p*rel;}
+  const pxProb=probFrom(pX,pa);
+  let pPit=pX;
+  if(c.oppPitcher&&c.oppPitcher.oppAVG>0&&c.oppPitcher.bf>=80){const rel=clamp(c.oppPitcher.oppAVG/lg,0.72,1.30);pPit=pX*(1+W.pit*(rel-1));}
+  const p1=probFrom(pPit,pa);
+  const ef=envFactor(c);const pEnv=pPit*(1+W.env*(ef-1));const p2=probFrom(pEnv,pa);
+  c.pBase=p2;c._perPA=pEnv;c._p0=p0;c._px=pxProb;c._p1=p1;c._p2=p2;c._ef=ef;
+}
+function scoreFinal(c,lg){
+  if(c._perPA==null)scoreBase(c,lg);
+  let perpa=c._perPA;const pa=expPA(c);const p2=c._p2;
+  let pPlat=perpa;const split=c.oppHand==="L"?c.vsL:c.oppHand==="R"?c.vsR:null;
+  if(split!=null&&split.ab>=30&&c.avg>0){const rel=clamp((split.h/split.ab)/c.avg,0.7,1.35);pPlat=perpa*(1+W.plat*(rel-1));}
+  const p3=probFrom(pPlat,pa);
+  let pForm=pPlat;
+  if(c.recentAVG!=null&&c.avg>0){const rel=clamp(c.recentAVG/c.avg,0.7,1.3);pForm=pPlat*(1+W.form*(rel-1));}
+  const p4=probFrom(pForm,pa);
+  let pBvp=pForm;
+  if(c.bvpAB>=5){const conf=Math.min(c.bvpAB/20,1);const rel=clamp((c.bvpH/c.bvpAB)/Math.max(c.avg,0.15),0.6,1.5);pBvp=pForm*(1+W.bvp*(rel-1)*conf);}
+  const p5=probFrom(pBvp,pa);
+  c.pFinal=p5;
+  c.contrib={skill:c._p0,xba:c._px-c._p0,pit:c._p1-c._px,env:c._p2-c._p1,plat:p3-p2,form:p4-p3,bvp:p5-p4};
+}
+
+async function enrichSplits(c,season){
+  try{
+    const j=await api(`/api/v1/people/${c.id}/stats?stats=statSplits&group=hitting&season=${season}&sitCodes=vl,vr,d,n&sportId=1`);
+    const splits=j.stats?.[0]?.splits||[];
+    for(const s of splits){
+      const code=(s.split?.code||"").toLowerCase();const st=s.stat||{};const ab=+st.atBats||0,h=+st.hits||0,avg=+st.avg||(ab?h/ab:0);
+      if(code==="vl")c.vsL={ab,h,avg};else if(code==="vr")c.vsR={ab,h,avg};
+      else if(code==="d")c.dayAVG=avg;else if(code==="n")c.nightAVG=avg;
+    }
+  }catch(e){}
+}
+async function enrichForm(c,season){
+  try{
+    const j=await api(`/api/v1/people/${c.id}/stats?stats=gameLog&group=hitting&season=${season}`);
+    const sp=(j.stats?.[0]?.splits||[]).slice();if(!sp.length)return;
+    const last=sp.slice(-15);let h=0,ab=0;for(const s of last){h+=+s.stat.hits||0;ab+=+s.stat.atBats||0;}
+    c.recentAVG=ab?h/ab:null;c.recentGames=last.length;
+    let streak=0;for(let i=sp.length-1;i>=0;i--){const a=+sp[i].stat.atBats||0,hh=+sp[i].stat.hits||0;if(a===0)continue;if(hh>=1)streak++;else break;}
+    c.streak=streak;
+  }catch(e){}
+}
+async function enrichBvP(c,season){
+  try{
+    let j=await api(`/api/v1/people/${c.id}/stats?stats=vsPlayerTotal&group=hitting&opposingPlayerId=${c.oppPitcherId}&season=${season}&sportId=1`);
+    let sp=j.stats?.[0]?.splits||[];
+    if(!sp.length){const j2=await api(`/api/v1/people/${c.id}/stats?stats=vsPlayer&group=hitting&opposingPlayerId=${c.oppPitcherId}&sportId=1`);sp=j2.stats?.[0]?.splits||[];}
+    let h=0,ab=0;for(const s of sp){h+=+s.stat.hits||0;ab+=+s.stat.atBats||0;}c.bvpAB=ab;c.bvpH=h;
+  }catch(e){}
+}
+
+function renderSlate(n,conf,lg,wx){
+  const s=els("slate");s.style.display="flex";
+  s.innerHTML=`<span>Slate · <b>${n}</b> games</span><span>Confirmed lineups · <b>${conf}/${n}</b></span><span>League AVG · <b>${lg.toFixed(3)}</b></span><span>Weather · <b>${wx?"on":"off"}</b></span>`;
+}
+const pct=x=>(x*100).toFixed(1)+"%";
+const signed=x=>{const v=x*100;return (v>=0?"+":"")+v.toFixed(1);};
+
+function render(top,lg){
+  const board=els("board");board.innerHTML="";
+  top.forEach((c,i)=>{
+    const cn=c.contrib;
+    const segs=[{v:cn.skill,col:"var(--grass-dim)"},{v:cn.xba,col:"var(--xba)"},{v:cn.pit,col:"var(--clay)"},{v:cn.plat,col:"var(--plat)"},{v:cn.env,col:"var(--env)"},{v:cn.form,col:"var(--form)"},{v:cn.bvp,col:"var(--bvp)"}];
+    const total=segs.reduce((a,s)=>a+Math.abs(s.v),0)||1;
+    const track=segs.map(s=>{const w=Math.abs(s.v)/total*100;if(w<0.4)return"";const col=s.v<0?"var(--clay-dim)":s.col;return `<i style="width:${w}%;background:${col}"></i>`;}).join("");
+    const legend=[["Skill","var(--grass-dim)",cn.skill,false],["xBA","var(--xba)",cn.xba,true],["Pitcher","var(--clay)",cn.pit,true],["Platoon","var(--plat)",cn.plat,true],["Park/cond","var(--env)",cn.env,true],["Form","var(--form)",cn.form,true],["BvP","var(--bvp)",cn.bvp,true]]
+      .map(([lab,col,v,d])=>{const cls=d?(v>0?"delta pos":(v<0?"delta neg":"delta")):"delta";return `<span><i class="dot" style="background:${col}"></i>${lab} <b class="${cls}">${d?signed(v):pct(v)}</b></span>`;}).join("");
+
+    const chips=[];
+    chips.push(c.confirmed?`<span class="chip green">Confirmed${c.slot?` · bats ${c.slot}`:""}</span>`:`<span class="chip warn">Projected</span>`);
+    if(c.oppHand){const sp=c.oppHand==="L"?c.vsL:c.vsR;chips.push(`<span class="chip">vs ${c.oppHand}HP · <b>${sp?sp.avg.toFixed(3):"—"}</b></span>`);}
+    const dnAvg=c.dn==="day"?c.dayAVG:c.nightAVG;
+    chips.push(`<span class="chip"><span class="dn">${c.dn}</span> · <b>${dnAvg!=null?dnAvg.toFixed(3):"—"}</b></span>`);
+    if(c.wx&&c.wx.roof)chips.push(`<span class="chip">Roof · climate</span>`);
+    else if(c.wx&&typeof c.wx.temp==="number"){chips.push(`<span class="chip">${c.wx.temp}°F · ${c.wx.wind}mph</span>`);
+      if(c.wx.precip!=null&&c.wx.precip>=50)chips.push(`<span class="chip rain">⚠ Rain-out risk ${c.wx.precip}%</span>`);}
+    if(c.xba!=null&&c.xba>0){const d=c.xba-c.avg;const tag=d>=0.012?`<span class="chip xba">xBA <b>${c.xba.toFixed(3)}</b> ▲ unlucky</span>`:d<=-0.012?`<span class="chip xba">xBA <b>${c.xba.toFixed(3)}</b> ▼ lucky</span>`:`<span class="chip xba">xBA <b>${c.xba.toFixed(3)}</b></span>`;chips.push(tag);}
+    if(c.streak&&c.streak>=3)chips.push(`<span class="chip amber">${c.streak}-game hit streak</span>`);
+    if(c.bvpAB>=5)chips.push(`<span class="chip flag">BvP ${c.bvpH}-${c.bvpAB} (noise)</span>`);
+    if(c.pa<120)chips.push(`<span class="chip warn">Small sample ${c.pa}PA</span>`);
+
+    const drivers=[["the matchup vs "+(c.oppPitcherName||"opp"),cn.pit],["the L/R platoon edge",cn.plat],["park & conditions",cn.env],["recent form",cn.form]]
+      .filter(d=>Math.abs(d[1])>0.002).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));
+    const topDriver=drivers[0]?` Biggest mover beyond raw skill: <span class="k">${drivers[0][0]}</span> (${signed(drivers[0][1])} pts).`:"";
+    const why=`A <span class="k">${c.avg.toFixed(3)}</span> hitter projected for ${expPA(c).toFixed(1)} plate appearances.${topDriver}`;
+
+    const oppLine=c.oppPitcherName?`${c.isHome?"vs":"@"} ${c.oppAbbr} · <span class="vs">${c.oppPitcherName}</span>${c.oppHand?` <span class="hand">(${c.oppHand}HP)</span>`:""}`:`${c.isHome?"vs":"@"} ${c.oppAbbr} · <span class="vs">pitcher TBD</span>`;
+
+    const card=document.createElement("div");card.className="card"+(i<3?" top3":"");
+    card.innerHTML=`
+      <div class="head" role="button" tabindex="0" aria-expanded="false">
+        <div class="rank">${i+1}</div>
+        <div class="who"><div class="nm">${c.name}</div><div class="matchup">${c.teamAbbr} ${oppLine}</div></div>
+        <div class="score"><div><div class="num">${pct(c.pFinal)}</div><div class="lab">hit score</div></div><div class="chev">▸</div></div>
+      </div>
+      <div class="chips">${chips.join("")}</div>
+      <div class="detail">
+        <div class="why">${why}</div>
+        <h5>Ensemble breakdown</h5>
+        <div class="ens"><div class="track">${track}</div><div class="legend">${legend}</div></div>
+        <h5>Full line</h5>
+        <div class="grid">
+          <span class="s">AVG <b>${c.avg.toFixed(3)}</b></span>
+          ${c.xba!=null&&c.xba>0?`<span class="s">xBA <b>${c.xba.toFixed(3)}</b></span>`:""}
+          <span class="s">OBP <b>${(c.obp||0).toFixed(3)}</b></span>
+          <span class="s">OPS <b>${(c.ops||0).toFixed(3)}</b></span>
+          <span class="s">K% <b>${(c.kRate*100).toFixed(0)}%</b></span>
+          <span class="s">PA <b>${c.pa}</b></span>
+          ${c.vsL?`<span class="s">vs LHP <b>${c.vsL.avg.toFixed(3)}</b></span>`:""}
+          ${c.vsR?`<span class="s">vs RHP <b>${c.vsR.avg.toFixed(3)}</b></span>`:""}
+          ${c.dayAVG?`<span class="s mut">Day <b>${c.dayAVG.toFixed(3)}</b></span>`:""}
+          ${c.nightAVG?`<span class="s mut">Night <b>${c.nightAVG.toFixed(3)}</b></span>`:""}
+          ${c.recentAVG!=null?`<span class="s">L${c.recentGames} <b>${c.recentAVG.toFixed(3)}</b></span>`:""}
+          <span class="s">Park <b>${c.parkF.toFixed(2)}</b></span>
+          ${c.oppPitcher?`<span class="s">Opp AVG-ag <b>${c.oppPitcher.oppAVG.toFixed(3)}</b></span>`:""}
+        </div>
+      </div>`;
+    const head=card.querySelector(".head");
+    const toggle=()=>{const o=card.classList.toggle("open");head.setAttribute("aria-expanded",o);};
+    head.addEventListener("click",toggle);
+    head.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();}});
+    board.appendChild(card);
+  });
+}
+</script>
+</body>
+</html>
