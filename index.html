@@ -61,6 +61,9 @@
 
   .slate{display:flex;gap:22px;flex-wrap:wrap;margin:18px 0 4px;font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--muted)}
   .slate b{color:var(--chalk);font-weight:600}
+  .lnote{margin:10px 0 2px;padding:11px 14px;border-radius:var(--radius);font-size:13px;line-height:1.45;border:1px solid var(--line)}
+  .lnote.ok{color:var(--grass);border-color:var(--grass-dim);background:rgba(70,194,122,.07)}
+  .lnote.warn{color:var(--clay);border-color:var(--clay-dim);background:rgba(224,139,76,.07)}
 
   .status{margin:34px 0;padding:22px;border:1px dashed var(--line);border-radius:var(--radius);color:var(--muted);font-size:14px}
   .status.err{border-color:var(--clay-dim);color:#f1c7a8}
@@ -80,7 +83,8 @@
   .who .nm{font-family:"Archivo",sans-serif;font-weight:800;font-size:19px;letter-spacing:-.01em;font-stretch:92%}
   .nmrow{display:flex;align-items:center;gap:11px;min-width:0}
   .avatar{position:relative;flex:0 0 46px;width:46px;height:46px}
-  .headshot{width:46px;height:46px;border-radius:50%;object-fit:cover;object-position:top center;background:#0a1219;border:1px solid var(--line);display:block}
+  .pic{width:46px;height:46px;border-radius:50%;overflow:hidden;background:#0a1219;border:1px solid var(--line);display:block}
+  .headshot{width:100%;height:100%;object-fit:cover;object-position:center 18%;display:block}
   .teambadge{position:absolute;right:-3px;bottom:-3px;width:20px;height:20px;background:var(--panel);border:1px solid var(--line);border-radius:50%;padding:1px;object-fit:contain}
   .nmwrap{min-width:0}
   .logo{display:inline-block;vertical-align:-3px;object-fit:contain}
@@ -167,7 +171,7 @@
       <button id="howBtn" aria-expanded="false">How this works ▾</button>
       <div class="panel" id="howPanel">
         <h4>What the numbers mean</h4>
-        <p><b>Hit score</b> — our estimate of the chance this batter gets at least one hit today. Treat it as a ranking, not a betting line: it runs a few points high, so use it to compare players, not to price a bet.</p>
+        <p><b>Hit score</b> — our estimate of the chance this batter gets at least one hit today, calibrated to realistic hit rates (roughly the 50–82% range real hitters live in). It's an estimate, so it's best for comparing and ranking players rather than as an exact betting line.</p>
         <p><b>Contact skill</b> — the foundation. A batter who gets a hit in 30% of at-bats (a .300 average) starts much higher than a .240 hitter. This is most of the score.</p>
         <p><b>Statcast luck check (xBA)</b> — expected batting average from how hard and where he hits the ball. If his real average is higher than his xBA, he's been a bit lucky and we trim him; if lower, he's been unlucky and we bump him.</p>
         <p><b>Pitcher &amp; platoon</b> — a pitcher who gives up lots of hits raises the score; a tough one lowers it. We also use how the batter hits that pitcher's hand (lefty vs righty), which is a real, repeatable edge.</p>
@@ -211,13 +215,14 @@
     </div>
 
     <div class="slate" id="slate" style="display:none"></div>
+    <div class="lnote" id="lineupNote" style="display:none"></div>
   </header>
 
   <div id="status" class="status">Pick a date and build the board. Lineups firm up ~1–3 hours before first pitch — earlier than that you get projected pools, flagged on each card. Weather only loads for today and the next ~16 days.</div>
   <div class="board" id="board"></div>
 
   <footer>
-    <p class="caveat"><b>Read this.</b> This is a heuristic ranking score, not a true probability — it runs a few points hot, so use it to <i>order</i> hitters, not to price a bet. Contact skill drives most of the number; everything else is a nudge. <b>Platoon and pitcher quality are the real signals.</b> <b>Batter-vs-pitcher samples are statistically meaningless</b> at the sizes that exist and are weighted near zero. <b>Day/night splits are shown but not scored</b> — they're mostly noise. <b>Weather barely affects hit frequency</b>; its real use here is the rain-out flag, since a postponed game kills the bet. The single most important input is whether the player actually starts — cards are tagged Confirmed or Projected. Sportsbooks price hit props efficiently, so a high score usually means a known favorite, not value; the edge is in the mismatch the line missed, not the name at the top. Data: MLB Stats API + Open-Meteo (both free). Not betting advice.</p>
+    <p class="caveat"><b>Read this.</b> The hit score is a calibrated estimate of the chance of at least one hit — tightened toward real-world hit rates so it no longer runs hot, but still an estimate, best for ranking. Contact skill (adjusted for luck via Statcast xBA) drives most of it; pitcher and platoon are the next real signals. <b>Batter-vs-pitcher samples are near-meaningless</b> and weighted almost to zero. <b>Day/night is shown, not scored.</b> Weather barely moves hit odds; its real use is the rain-out flag. Home-run chance is a rough park- and pitcher-adjusted estimate. The one thing that matters most is whether he actually starts — cards say Confirmed or Projected. Books price these props efficiently, so a high score is usually a known favorite, not free money. Data: MLB Stats API + Baseball Savant + Open-Meteo. Not betting advice.</p>
   </footer>
 </div>
 
@@ -255,7 +260,10 @@ async function loadSavant(season){
 const PARK={115:1.10,113:1.04,110:1.01,111:1.05,118:1.03,109:1.02,140:1.02,143:1.02,108:1.01,142:1.01,141:1.01,120:1.01,144:1.00,147:1.00,117:1.00,112:1.00,138:1.00,134:1.00,119:0.99,158:0.99,145:0.99,121:0.99,116:0.99,114:0.98,139:0.98,133:0.98,146:0.97,137:0.96,135:0.96,136:0.95};
 const COORD={108:[33.80,-117.88],109:[33.45,-112.07],110:[39.28,-76.62],111:[42.35,-71.10],112:[41.95,-87.66],113:[39.10,-84.51],114:[41.50,-81.69],115:[39.76,-104.99],116:[42.34,-83.05],117:[29.76,-95.36],118:[39.05,-94.48],119:[34.07,-118.24],120:[38.87,-77.01],121:[40.76,-73.85],133:[38.58,-121.51],134:[40.45,-80.01],135:[32.71,-117.16],136:[47.59,-122.33],137:[37.78,-122.39],138:[38.62,-90.19],139:[27.77,-82.65],140:[32.75,-97.08],141:[43.64,-79.39],142:[44.98,-93.28],143:[39.91,-75.17],144:[33.89,-84.47],145:[41.83,-87.63],146:[25.78,-80.22],147:[40.83,-73.93],158:[43.03,-87.97]};
 const ROOFED=new Set([109,117,136,140,141,146,158,139]);
+const PARKHR={115:1.09,113:1.18,147:1.12,110:1.08,143:1.07,119:1.05,145:1.05,108:1.02,158:1.03,144:1.02,117:1.03,140:1.02,141:1.02,142:1.02,111:1.02,109:1.03,139:0.98,114:0.98,120:1.00,112:1.00,121:0.97,138:0.95,135:0.95,136:0.92,116:0.92,133:0.90,134:0.90,118:0.90,146:0.86,137:0.82};
 const parkFactor=id=>PARK[id]??1.00;
+const parkHR=id=>PARKHR[id]??1.00;
+let LGRATE={avg:0.243,hit:0.220,hr:0.031,base:0.66};
 const PA_BY_SLOT={1:4.7,2:4.6,3:4.5,4:4.4,5:4.3,6:4.1,7:4.0,8:3.9,9:3.8};
 
 async function pool(items,fn,conc=5){
@@ -266,10 +274,11 @@ async function pool(items,fn,conc=5){
 
 const W={pit:0.60,plat:0.45,env:0.50,form:0.25,bvp:0.10,xba:0.50};
 const F={confirmedOnly:false,minPA:120,weather:true};
+let userTouchedConfirmed=false;
 function bindSlider(id,key,vid,fmt=v=>v.toFixed(2)){const s=els(id),v=els(vid);s.addEventListener("input",()=>{W[key]=parseFloat(s.value);v.textContent=fmt(parseFloat(s.value));});}
 bindSlider("w-pit","pit","v-pit");bindSlider("w-plat","plat","v-plat");bindSlider("w-env","env","v-env");bindSlider("w-form","form","v-form");bindSlider("w-bvp","bvp","v-bvp");bindSlider("w-xba","xba","v-xba");
 els("f-minpa").addEventListener("input",e=>{F.minPA=+e.target.value;els("v-minpa").textContent=e.target.value;});
-els("f-confirmed").addEventListener("change",e=>F.confirmedOnly=e.target.checked);
+els("f-confirmed").addEventListener("change",e=>{F.confirmedOnly=e.target.checked;userTouchedConfirmed=true;});
 els("f-weather").addEventListener("change",e=>F.weather=e.target.checked);
 els("toggleDrawer").addEventListener("click",()=>{const d=els("drawer");const o=d.classList.toggle("open");els("toggleDrawer").textContent=o?"Tune & filter ▴":"Tune & filter ▾";});
 els("howBtn").addEventListener("click",()=>{const p=els("howPanel");const o=p.classList.toggle("open");els("howBtn").setAttribute("aria-expanded",o);els("howBtn").textContent=o?"How this works ▴":"How this works ▾";});
@@ -291,7 +300,8 @@ async function run(){
     if(!games.length){setStatus("No MLB games on <code>"+date+"</code>. Regular season runs late March through September.");return finish(btn);}
 
     setStatus("Loading league hitting + pitching lines…",false,true);
-    const [hitMap,lgAVG]=await loadHitting(season);
+    const [hitMap,lgAVG,lgHitPerPA,lgHRperPA]=await loadHitting(season);
+    LGRATE={avg:lgAVG,hit:lgHitPerPA,hr:lgHRperPA,base:1-Math.pow(1-lgHitPerPA,4.3)};
     const pitMap=await loadPitching(season);
     const savantMap=await loadSavant(season);
     for(const [id,line] of hitMap){const s=savantMap.get(id);line.xba=s?s.xba:null;line.xwoba=s?s.xwoba:null;}
@@ -312,11 +322,20 @@ async function run(){
       const hPP=g.teams.home.probablePitcher, aPP=g.teams.away.probablePitcher;
       const lu=g.lineups, has=lu&&((lu.homePlayers?.length||0)+(lu.awayPlayers?.length||0)>0);
       if(has)confirmedGames++;
-      const ctx={pf,wx,dn,roof:ROOFED.has(home.id),gamePk:g.gamePk};
+      const ctx={pf,wx,dn,roof:ROOFED.has(home.id),gamePk:g.gamePk,venueId:home.id};
       addSide(cands,hitMap,pitMap,lu?.homePlayers,home,away,aPP,ctx,has,true);
       addSide(cands,hitMap,pitMap,lu?.awayPlayers,away,home,hPP,ctx,has,false);
     }
     if(!cands.length){setStatus("Found "+games.length+" games but no batters with usable season stats yet.",true);return finish(btn);}
+
+    // lineup discipline: once most lineups are posted, favor confirmed automatically (unless user overrode)
+    const confRatio=games.length?confirmedGames/games.length:0;
+    if(!userTouchedConfirmed){F.confirmedOnly=confRatio>=0.5;els("f-confirmed").checked=F.confirmedOnly;}
+    const ln=els("lineupNote");
+    if(confRatio>=0.999){ln.className="lnote ok";ln.textContent="✓ All lineups confirmed — these picks use real starting lineups.";}
+    else if(confRatio<=0){ln.className="lnote warn";ln.textContent="⚠ No lineups posted yet. Every pick is projected — who actually starts matters more than any stat here. Rebuild 1–3 hours before first pitch.";}
+    else{ln.className="lnote warn";ln.textContent=`⚠ ${confirmedGames} of ${games.length} lineups posted. Confirmed games use real lineups${F.confirmedOnly?" and are shown by default":"; projected picks are tagged"}. Rebuild closer to first pitch for the rest.`;}
+    ln.style.display="block";
 
     let pool0=cands.filter(c=>c.pa>=F.minPA && (!F.confirmedOnly||c.confirmed));
     if(!pool0.length)pool0=cands;
@@ -358,21 +377,22 @@ function persistBoard(top,date){
 
 async function loadHitting(season){
   const j=await api(`/api/v1/stats?stats=season&group=hitting&season=${season}&gameType=R&sportId=1&playerPool=All&limit=3000`);
-  const splits=j.stats?.[0]?.splits||[];const map=new Map();let H=0,AB=0;
-  for(const s of splits){const st=s.stat||{},ab=+st.atBats||0,h=+st.hits||0;
+  const splits=j.stats?.[0]?.splits||[];const map=new Map();let H=0,AB=0,PA=0,HR=0;
+  for(const s of splits){const st=s.stat||{},ab=+st.atBats||0,h=+st.hits||0,hr=+st.homeRuns||0;
     const pa=+st.plateAppearances||(ab+(+st.baseOnBalls||0)+(+st.hitByPitch||0)+(+st.sacFlies||0)+(+st.sacBunts||0));
-    if(ab<5)continue;H+=h;AB+=ab;
+    if(ab<5)continue;H+=h;AB+=ab;PA+=(pa||ab);HR+=hr;
     map.set(s.player.id,{id:s.player.id,name:s.player.fullName,teamId:s.team?.id,pos:s.player.primaryPosition?.abbreviation,
       bats:s.player.batSide?.code,avg:+st.avg||(h/Math.max(ab,1)),obp:+st.obp||0,slg:+st.slg||0,ops:+st.ops||0,
-      ab,h,pa:pa||ab,k:+st.strikeOuts||0,kRate:pa?(+st.strikeOuts||0)/pa:0});}
-  return [map, AB?H/AB:0.245];
+      ab,h,hr,pa:pa||ab,k:+st.strikeOuts||0,kRate:pa?(+st.strikeOuts||0)/pa:0});}
+  const lgAVG=AB?H/AB:0.245, lgHitPerPA=PA?H/PA:0.22, lgHRperPA=PA?HR/PA:0.031;
+  return [map,lgAVG,lgHitPerPA,lgHRperPA];
 }
 async function loadPitching(season){
   const j=await api(`/api/v1/stats?stats=season&group=pitching&season=${season}&gameType=R&sportId=1&playerPool=All&limit=3000`);
   const splits=j.stats?.[0]?.splits||[];const map=new Map();
   for(const s of splits){const st=s.stat||{};
     map.set(s.player.id,{id:s.player.id,name:s.player.fullName,hand:s.player.pitchHand?.code,
-      oppAVG:+st.avg||0,whip:+st.whip||0,era:+st.era||0,k9:+st.strikeoutsPer9Inn||0,bf:+st.battersFaced||0});}
+      oppAVG:+st.avg||0,whip:+st.whip||0,era:+st.era||0,k9:+st.strikeoutsPer9Inn||0,bf:+st.battersFaced||0,hr:+st.homeRuns||0});}
   return map;
 }
 async function loadWeather(g){
@@ -394,47 +414,59 @@ function addSide(out,hitMap,pitMap,players,team,opp,oppPP,ctx,confirmed,isHome){
   const oppHand=oppLine?.hand || oppPP?.pitchHand?.code || null;
   const mk=(line,slot)=>({...line,teamAbbr:team.abbreviation||team.name,oppAbbr:opp.abbreviation||opp.name,oppId:opp.id,logoTeamId:team.id,isHome,gamePk:ctx.gamePk,
     oppPitcherId:oppPid,oppPitcherName:oppPname,oppPitcher:oppLine,oppHand,
-    parkF:ctx.pf,wx:ctx.wx,dn:ctx.dn,roof:ctx.roof,slot,confirmed,
+    parkF:ctx.pf,venueId:ctx.venueId,wx:ctx.wx,dn:ctx.dn,roof:ctx.roof,slot,confirmed,
     vsL:null,vsR:null,dayAVG:null,nightAVG:null,recentAVG:null,recentGames:0,streak:null,bvpAB:0,bvpH:0,
     pBase:null,pFinal:null,contrib:null});
   if(confirmed&&players?.length){players.forEach((p,i)=>{const l=hitMap.get(p.id);if(l)out.push(mk(l,i+1));});}
   else{for(const l of hitMap.values()){if(l.teamId!==team.id||l.pos==="P"||l.pa<30)continue;out.push(mk(l,null));}}
 }
 
-const perPA=c=>clamp(c.h/Math.max(c.pa,1),0.05,0.42);
+// shrink hit-per-PA toward league mean (stabilizes small samples), realistic bounds
+function perPA(c){const K0=60,lg=LGRATE.hit;const q=(c.h+K0*lg)/(Math.max(c.pa,0)+K0);return clamp(q,0.10,0.34);}
 const expPA=c=>c.slot?(PA_BY_SLOT[c.slot]||4.2):4.3;
 const probFrom=(p,pa)=>1-Math.pow(1-p,pa);
+// calibration: the raw multiplicative model overspreads, so compress toward the true league base rate
+function cal(p){const b=LGRATE.base;return clamp(b+(p-b)*0.70,0.38,0.86);}
 function envFactor(c){
   let f=c.parkF;
   if(c.wx&&!c.wx.roof&&typeof c.wx.temp==="number") f*=clamp(1+(c.wx.temp-70)*0.0015,0.97,1.04);
   return f;
 }
+function computeHR(c,pa){
+  const lg=LGRATE.hr;
+  let hp=(c.hr!=null&&c.pa>0)?((c.hr+120*lg)/(c.pa+120)):lg; // shrink toward league
+  if(c.oppPitcher&&c.oppPitcher.bf>=80&&c.oppPitcher.hr!=null){const pr=c.oppPitcher.hr/c.oppPitcher.bf;const rel=clamp(pr/Math.max(lg,0.001),0.6,1.7);hp*=rel;}
+  hp*=parkHR(c.venueId);
+  hp=clamp(hp,0.004,0.13);
+  c.hrProb=1-Math.pow(1-hp,pa);
+}
 function scoreBase(c,lg){
-  let p=perPA(c);const pa=expPA(c);const p0=probFrom(p,pa);
+  let p=perPA(c);const pa=expPA(c);const r0=probFrom(p,pa);
   // Statcast xBA correction: blend expected AVG with actual to regress out luck
   let pX=p;
   if(c.xba!=null&&c.xba>0&&c.avg>0){const trueAVG=W.xba*c.xba+(1-W.xba)*c.avg;const rel=clamp(trueAVG/c.avg,0.80,1.20);pX=p*rel;}
-  const pxProb=probFrom(pX,pa);
+  const rX=probFrom(pX,pa);
   let pPit=pX;
   if(c.oppPitcher&&c.oppPitcher.oppAVG>0&&c.oppPitcher.bf>=80){const rel=clamp(c.oppPitcher.oppAVG/lg,0.72,1.30);pPit=pX*(1+W.pit*(rel-1));}
-  const p1=probFrom(pPit,pa);
-  const ef=envFactor(c);const pEnv=pPit*(1+W.env*(ef-1));const p2=probFrom(pEnv,pa);
-  c.pBase=p2;c._perPA=pEnv;c._p0=p0;c._px=pxProb;c._p1=p1;c._p2=p2;c._ef=ef;
+  const r1=probFrom(pPit,pa);
+  const ef=envFactor(c);const pEnv=pPit*(1+W.env*(ef-1));const r2=probFrom(pEnv,pa);
+  c.pBase=cal(r2);c._perPA=pEnv;c._p0=cal(r0);c._px=cal(rX);c._p1=cal(r1);c._p2=cal(r2);c._ef=ef;
+  computeHR(c,pa);
 }
 function scoreFinal(c,lg){
   if(c._perPA==null)scoreBase(c,lg);
-  let perpa=c._perPA;const pa=expPA(c);const p2=c._p2;
+  let perpa=c._perPA;const pa=expPA(c);
   let pPlat=perpa;const split=c.oppHand==="L"?c.vsL:c.oppHand==="R"?c.vsR:null;
   if(split!=null&&split.ab>=30&&c.avg>0){const rel=clamp((split.h/split.ab)/c.avg,0.7,1.35);pPlat=perpa*(1+W.plat*(rel-1));}
-  const p3=probFrom(pPlat,pa);
+  const r3=cal(probFrom(pPlat,pa));
   let pForm=pPlat;
   if(c.recentAVG!=null&&c.avg>0){const rel=clamp(c.recentAVG/c.avg,0.7,1.3);pForm=pPlat*(1+W.form*(rel-1));}
-  const p4=probFrom(pForm,pa);
+  const r4=cal(probFrom(pForm,pa));
   let pBvp=pForm;
   if(c.bvpAB>=5){const conf=Math.min(c.bvpAB/20,1);const rel=clamp((c.bvpH/c.bvpAB)/Math.max(c.avg,0.15),0.6,1.5);pBvp=pForm*(1+W.bvp*(rel-1)*conf);}
-  const p5=probFrom(pBvp,pa);
-  c.pFinal=p5;
-  c.contrib={skill:c._p0,xba:c._px-c._p0,pit:c._p1-c._px,env:c._p2-c._p1,plat:p3-p2,form:p4-p3,bvp:p5-p4};
+  const r5=cal(probFrom(pBvp,pa));
+  c.pFinal=r5;
+  c.contrib={skill:c._p0,xba:c._px-c._p0,pit:c._p1-c._px,env:c._p2-c._p1,plat:r3-c._p2,form:r4-r3,bvp:r5-r4};
 }
 
 async function enrichSplits(c,season){
@@ -521,6 +553,7 @@ function render(top,lg){
     if(sp)kn.push(`<div class="kn"><span class="kl">vs ${c.oppHand==="L"?"left":"right"}-handers<span class="kh">how he hits pitchers like today's starter</span></span><span class="kv">${sp.avg.toFixed(3)}</span></div>`);
     if(c.recentAVG!=null)kn.push(`<div class="kn"><span class="kl">Last ${c.recentGames} games<span class="kh">recent form</span></span><span class="kv">${c.recentAVG.toFixed(3)}</span></div>`);
     if(c.oppPitcher)kn.push(`<div class="kn"><span class="kl">Pitcher allows<span class="kh">${c.oppPitcherName||"opponent"}'s batting average against</span></span><span class="kv">${c.oppPitcher.oppAVG.toFixed(3)}</span></div>`);
+    if(c.hrProb!=null)kn.push(`<div class="kn"><span class="kl">Home run chance<span class="kh">est. chance of a HR today (park + pitcher adjusted)</span></span><span class="kv">${(c.hrProb*100).toFixed(1)}%</span></div>`);
 
     // ---- full line (hidden behind "show all stats") ----
     const dnAvg=c.dn==="day"?c.dayAVG:c.nightAVG;
@@ -536,6 +569,7 @@ function render(top,lg){
       ${dnAvg!=null?`<span class="s mut">${c.dn==="day"?"Day":"Night"} <b>${dnAvg.toFixed(3)}</b></span>`:""}
       ${c.recentAVG!=null?`<span class="s">L${c.recentGames} <b>${c.recentAVG.toFixed(3)}</b></span>`:""}
       <span class="s">Park <b>${c.parkF.toFixed(2)}</b></span>
+      ${c.hrProb!=null?`<span class="s">HR% <b>${(c.hrProb*100).toFixed(1)}%</b></span>`:""}
       ${c.oppPitcher?`<span class="s">Opp AVG-ag <b>${c.oppPitcher.oppAVG.toFixed(3)}</b></span>`:""}
     </div>`;
 
@@ -546,7 +580,7 @@ function render(top,lg){
     const tImg=`<img class="logo sm" src="${TLOGO(tId)}" alt="" onerror="${HIDE}">`;
     const oImg=c.oppId?`<img class="logo sm" src="${TLOGO(c.oppId)}" alt="" onerror="${HIDE}">`:"";
     const matchup=`${tImg}${c.teamAbbr} ${c.isHome?"vs":"@"} ${oImg}${c.oppAbbr} · <span class="vs">${c.oppPitcherName||"pitcher TBD"}</span>${(c.oppPitcherName&&c.oppHand)?` <span class="hand">(${c.oppHand==="L"?"LHP":"RHP"})</span>`:""}`;
-    const avatar=`<span class="avatar"><img class="headshot" src="${HEAD(c.id)}" alt="" onerror="${HIDE}"><img class="teambadge" src="${TLOGO(tId)}" alt="" onerror="${HIDE}"></span>`;
+    const avatar=`<span class="avatar"><span class="pic"><img class="headshot" src="${HEAD(c.id)}" alt="" onerror="${HIDE}"></span><img class="teambadge" src="${TLOGO(tId)}" alt="" onerror="${HIDE}"></span>`;
 
     const card=document.createElement("div");card.className="card"+(i<3?" top3":"");
     card.innerHTML=`
