@@ -6,14 +6,14 @@
 <title>Live Box — Honky Jefe's Hit List</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:ital,wght@0,400;0,600;0,800;0,900&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:ital,wght@0,400;0,600;0,800;0,900&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#0a1f44; --bg2:#0c2551; --panel:#112a57; --line:#26437a;
     --chalk:#ffffff; --muted:#a6b8d9; --muted2:#7288b4;
     --grass:#5b9bff; --grass-dim:#3e6fb5;
-    --clay:#e4002b; --clay-dim:#a20d2c;
-    --amber:#e4002b; --live:#e4002b; --radius:6px;
+    --clay:#ff4d63; --clay-dim:#b3243c;
+    --amber:#ff4d63; --redsolid:#e4002b; --live:#e4002b; --radius:6px;
   }
   *{box-sizing:border-box}
   html,body{margin:0}
@@ -22,12 +22,12 @@
 
   header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:20px}
   .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
-  h1{font-family:"Archivo Black","Archivo",sans-serif;font-weight:400;font-stretch:normal;text-transform:uppercase;letter-spacing:.01em;font-size:clamp(28px,5.6vw,48px);line-height:.95;margin:8px 0 6px;text-shadow:0 1px 0 rgba(0,0,0,.4),0 3px 7px rgba(0,0,0,.4)}
+  h1{font-family:"Anton","Archivo",sans-serif;font-weight:400;font-stretch:normal;text-transform:uppercase;letter-spacing:.01em;font-size:clamp(30px,7vw,54px);line-height:.85;margin:8px 0 6px;text-shadow:0 2px 0 rgba(0,0,0,.35),0 6px 16px rgba(0,0,0,.5)}
   h1 .acc{color:var(--amber)}
   .sub{color:var(--muted);max-width:64ch;font-size:14px}
 
   .bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:18px}
-  a.back{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--amber);text-decoration:none;border:1px solid #7a6326;padding:9px 12px;border-radius:var(--radius)}
+  a.back{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--amber);text-decoration:none;border:1px solid var(--clay-dim);padding:9px 12px;border-radius:var(--radius)}
   a.back:hover{filter:brightness(1.1)}
   button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);cursor:pointer;font-family:"IBM Plex Mono",monospace;font-size:12px;padding:9px 12px;border-radius:var(--radius)}
   button.ghost:hover{color:var(--chalk);border-color:var(--muted)}
@@ -60,7 +60,7 @@
   .pill.live .dotlive{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--live);margin-right:5px;vertical-align:middle;animation:pulse 1.2s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
   .pill.final{color:var(--muted2)}
-  .pill.pre{color:var(--amber);border-color:#7a6326}
+  .pill.pre{color:var(--amber);border-color:var(--clay-dim)}
   .pill.off{color:var(--clay);border-color:var(--clay-dim)}
 
   .result{display:flex;align-items:baseline;gap:10px;margin:14px 0 10px}
