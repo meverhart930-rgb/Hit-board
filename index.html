@@ -78,6 +78,13 @@
   .rank{font-family:"Archivo",sans-serif;font-weight:900;font-size:38px;line-height:1;color:var(--line);font-stretch:75%}
   .card.top3 .rank{color:var(--amber)}
   .who .nm{font-family:"Archivo",sans-serif;font-weight:800;font-size:19px;letter-spacing:-.01em;font-stretch:92%}
+  .nmrow{display:flex;align-items:center;gap:11px;min-width:0}
+  .avatar{position:relative;flex:0 0 46px;width:46px;height:46px}
+  .headshot{width:46px;height:46px;border-radius:50%;object-fit:cover;object-position:top center;background:#0a1219;border:1px solid var(--line);display:block}
+  .teambadge{position:absolute;right:-3px;bottom:-3px;width:20px;height:20px;background:var(--panel);border:1px solid var(--line);border-radius:50%;padding:1px;object-fit:contain}
+  .nmwrap{min-width:0}
+  .logo{display:inline-block;vertical-align:-3px;object-fit:contain}
+  .logo.sm{width:15px;height:15px;margin-right:3px}
   .who .matchup{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--muted);margin-top:2px}
   .who .matchup .vs{color:var(--clay)}
   .who .matchup .hand{color:var(--plat)}
@@ -385,7 +392,7 @@ async function loadWeather(g){
 function addSide(out,hitMap,pitMap,players,team,opp,oppPP,ctx,confirmed,isHome){
   const oppPid=oppPP?.id, oppPname=oppPP?.fullName, oppLine=oppPid?pitMap.get(oppPid):null;
   const oppHand=oppLine?.hand || oppPP?.pitchHand?.code || null;
-  const mk=(line,slot)=>({...line,teamAbbr:team.abbreviation||team.name,oppAbbr:opp.abbreviation||opp.name,isHome,gamePk:ctx.gamePk,
+  const mk=(line,slot)=>({...line,teamAbbr:team.abbreviation||team.name,oppAbbr:opp.abbreviation||opp.name,oppId:opp.id,logoTeamId:team.id,isHome,gamePk:ctx.gamePk,
     oppPitcherId:oppPid,oppPitcherName:oppPname,oppPitcher:oppLine,oppHand,
     parkF:ctx.pf,wx:ctx.wx,dn:ctx.dn,roof:ctx.roof,slot,confirmed,
     vsL:null,vsR:null,dayAVG:null,nightAVG:null,recentAVG:null,recentGames:0,streak:null,bvpAB:0,bvpH:0,
@@ -532,13 +539,20 @@ function render(top,lg){
       ${c.oppPitcher?`<span class="s">Opp AVG-ag <b>${c.oppPitcher.oppAVG.toFixed(3)}</b></span>`:""}
     </div>`;
 
-    const oppLine=c.oppPitcherName?`${c.isHome?"vs":"@"} ${c.oppAbbr} · <span class="vs">${c.oppPitcherName}</span>${c.oppHand?` <span class="hand">(${c.oppHand==="L"?"LHP":"RHP"})</span>`:""}`:`${c.isHome?"vs":"@"} ${c.oppAbbr} · <span class="vs">pitcher TBD</span>`;
+    const TLOGO=id=>`https://www.mlbstatic.com/team-logos/${id}.svg`;
+    const HEAD=id=>`https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_180,q_auto:best/v1/people/${id}/headshot/67/current`;
+    const HIDE="this.style.visibility='hidden'";
+    const tId=c.logoTeamId||c.teamId;
+    const tImg=`<img class="logo sm" src="${TLOGO(tId)}" alt="" onerror="${HIDE}">`;
+    const oImg=c.oppId?`<img class="logo sm" src="${TLOGO(c.oppId)}" alt="" onerror="${HIDE}">`:"";
+    const matchup=`${tImg}${c.teamAbbr} ${c.isHome?"vs":"@"} ${oImg}${c.oppAbbr} · <span class="vs">${c.oppPitcherName||"pitcher TBD"}</span>${(c.oppPitcherName&&c.oppHand)?` <span class="hand">(${c.oppHand==="L"?"LHP":"RHP"})</span>`:""}`;
+    const avatar=`<span class="avatar"><img class="headshot" src="${HEAD(c.id)}" alt="" onerror="${HIDE}"><img class="teambadge" src="${TLOGO(tId)}" alt="" onerror="${HIDE}"></span>`;
 
     const card=document.createElement("div");card.className="card"+(i<3?" top3":"");
     card.innerHTML=`
       <div class="head" role="button" tabindex="0" aria-expanded="false">
         <div class="rank">${i+1}</div>
-        <div class="who"><div class="nm">${c.name}</div><div class="matchup">${c.teamAbbr} ${oppLine}</div></div>
+        <div class="who"><div class="nmrow">${avatar}<div class="nmwrap"><div class="nm">${c.name}</div><div class="matchup">${matchup}</div></div></div></div>
         <div class="score"><div><div class="num">${pct(c.pFinal)}</div><div class="lab">hit score</div></div><div class="chev">▸</div></div>
       </div>
       <div class="chips">${chips.join("")}</div>
