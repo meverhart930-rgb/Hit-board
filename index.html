@@ -31,7 +31,10 @@
   .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
   h1{font-family:"Archivo",sans-serif;font-weight:900;font-size:clamp(34px,7vw,60px);line-height:.92;letter-spacing:-.02em;margin:8px 0 6px;font-stretch:90%}
   h1 .acc{color:var(--amber)}
-  .brand-kick{display:block;font-family:"Anton",sans-serif;font-size:clamp(14px,3.4vw,21px);letter-spacing:.26em;text-transform:uppercase;color:var(--chalk);opacity:.9;margin:10px 0 0 2px}
+  .brand-kick{display:block;font-family:"Anton",sans-serif;font-size:clamp(14px,3.4vw,21px);letter-spacing:.26em;text-transform:uppercase;color:var(--chalk);opacity:.9;margin:0 0 0 2px}
+  .brandrow{display:flex;align-items:center;gap:15px;margin-top:10px}
+  .brandlogo{height:clamp(88px,22vw,132px);width:auto;flex:0 0 auto;border-radius:12px;border:2px solid var(--redsolid);background:#f3ede1;box-shadow:0 5px 20px rgba(0,0,0,.5);display:block}
+  .brandtext{min-width:0}
   h1.wordmark{font-family:"Anton","Archivo",sans-serif;font-weight:400;font-stretch:normal;text-transform:uppercase;letter-spacing:.006em;white-space:nowrap;
     font-size:clamp(48px,14vw,108px);line-height:.82;margin:0 0 4px;color:var(--chalk);
     text-shadow:0 2px 0 rgba(0,0,0,.35),0 7px 18px rgba(0,0,0,.5)}
@@ -172,8 +175,13 @@
 <div class="wrap">
   <header>
     <div class="eyebrow">Ensemble hit-probability model · MLB Stats API + Open-Meteo</div>
-    <span class="brand-kick">Honky Jefe's</span>
-    <h1 class="wordmark">Hit <span class="acc">List</span></h1>
+    <div class="brandrow">
+      <img class="brandlogo" src="honky-jefe.jpg" alt="Honky Jefe mascot" width="784" height="1168">
+      <div class="brandtext">
+        <span class="brand-kick">Honky Jefe's</span>
+        <h1 class="wordmark">Hit <span class="acc">List</span></h1>
+      </div>
+    </div>
     <p class="sub">The 10 batters most likely to record a hit on the slate. Tap any card to see why, in plain English. The score weighs contact skill, the opposing pitcher, the lefty/righty matchup, the park, weather, recent form, and a Statcast luck check. Read the footer before you trust the number.</p>
 
     <div class="explainer">
