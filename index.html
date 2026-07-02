@@ -161,6 +161,30 @@
   .explainer .panel .tip{color:var(--clay)}
 
   footer{margin-top:40px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:12.5px;line-height:1.6}
+  /* ---- streak watch + track record ---- */
+  .sechead{font-family:"Anton",sans-serif;text-transform:uppercase;letter-spacing:.08em;font-size:clamp(20px,4.6vw,28px);margin:34px 0 4px;color:var(--chalk)}
+  .sechead .acc{color:var(--amber)}
+  .secsub{color:var(--muted);font-size:13px;margin:0 0 14px}
+  .strow{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px}
+  .strow .pic{width:44px;height:44px;border-radius:50%;overflow:hidden;flex:0 0 auto;background:#0c2551}
+  .strow .pic img{width:100%;height:100%;object-fit:cover;display:block}
+  .strow .nm{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .strow .meta{color:var(--muted);font-size:12px}
+  .strow .stk{margin-left:auto;font-family:"Anton",sans-serif;font-size:24px;color:var(--amber);white-space:nowrap}
+  .strow .stk small{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--muted);display:block;text-align:right;letter-spacing:.08em}
+  .recwrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .recbig{font-family:"Anton",sans-serif;font-size:clamp(30px,8vw,44px);line-height:1;color:var(--grass)}
+  .recbig small{font-family:"Inter",sans-serif;font-size:13px;color:var(--muted);display:block;margin-top:4px;font-weight:400}
+  .bandrow{display:flex;align-items:center;gap:10px;margin-top:8px;font-family:"IBM Plex Mono",monospace;font-size:12px}
+  .bandrow .lbl{width:74px;color:var(--muted);flex:0 0 auto}
+  .bandrow .bar{flex:1;height:10px;background:#0c2551;border-radius:5px;overflow:hidden}
+  .bandrow .bar i{display:block;height:100%;background:var(--grass)}
+  .bandrow .val{width:86px;text-align:right;color:var(--chalk);flex:0 0 auto}
+  .dayrow{margin-top:10px;font-size:12.5px;color:var(--muted)}
+  .dayrow b{color:var(--chalk);font-weight:600}
+  .pickchip{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:11px;border:1px solid var(--line);border-radius:4px;padding:2px 7px;margin:3px 4px 0 0;color:var(--muted)}
+  .pickchip.hit{color:var(--grass);border-color:var(--grass-dim)}
+  .pickchip.miss{color:var(--clay);border-color:var(--clay-dim)}
   footer .caveat{max-width:80ch}
   footer b{color:var(--clay)}
   a{color:var(--amber)}
@@ -238,6 +262,9 @@
   <div id="status" class="status">Pick a date and build the board. Lineups firm up ~1–3 hours before first pitch — earlier than that you get projected pools, flagged on each card. Weather only loads for today and the next ~16 days.</div>
   <div class="board" id="board"></div>
 
+  <section id="streaks" style="display:none"></section>
+  <section id="record"></section>
+
   <footer>
     <p class="caveat"><b>Read this.</b> The hit score is a calibrated estimate of the chance of at least one hit — tightened toward real-world hit rates so it no longer runs hot, but still an estimate, best for ranking. Contact skill (adjusted for luck via Statcast xBA) drives most of it; pitcher and platoon are the next real signals. <b>Batter-vs-pitcher samples are near-meaningless</b> and weighted almost to zero. <b>Day/night is shown, not scored.</b> Weather barely moves hit odds; its real use is the rain-out flag. Home-run chance is a rough park- and pitcher-adjusted estimate. The one thing that matters most is whether he actually starts — cards say Confirmed or Projected. Books price these props efficiently, so a high score is usually a known favorite, not free money. Data: MLB Stats API + Baseball Savant + Open-Meteo. Not betting advice.</p>
   </footer>
@@ -300,7 +327,7 @@ els("f-weather").addEventListener("change",e=>F.weather=e.target.checked);
 els("toggleDrawer").addEventListener("click",()=>{const d=els("drawer");const o=d.classList.toggle("open");els("toggleDrawer").textContent=o?"Tune & filter ▴":"Tune & filter ▾";});
 els("howBtn").addEventListener("click",()=>{const p=els("howPanel");const o=p.classList.toggle("open");els("howBtn").setAttribute("aria-expanded",o);els("howBtn").textContent=o?"How this works ▴":"How this works ▾";});
 
-(function(){const d=new Date();els("date").value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);})();
+(function(){const d=new Date();els("date").value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);loadRecord();})();
 
 function setStatus(html,err=false,loading=false){const s=els("status");s.style.display="block";s.className="status"+(err?" err":"");s.innerHTML=html+(loading?'<div class="bar-load"><i></i></div>':"");}
 function clearStatus(){els("status").style.display="none";}
@@ -372,7 +399,9 @@ async function run(){
     pool0.sort((a,b)=>b.pFinal-a.pFinal);
     const top=pool0.slice(0,10);
     clearStatus();renderSlate(games.length,confirmedGames,lgAVG,F.weather&&isFuture);render(top,lgAVG);
-    persistBoard(top,date);
+    renderStreaks(pool0);
+    persistBoard(top,date,games);
+    loadRecord();
   }catch(e){
     console.error(e);
     setStatus("Couldn't reach the MLB Stats API — most likely the browser blocking the cross-origin request (CORS).<br><br>1. Open <b>Tune &amp; filter ▾</b>, tick <code>Route MLB calls through CORS proxy</code>, paste a proxy prefix.<br>2. Better: deploy a tiny Netlify Function so it's same-origin and CORS can't bite. Ask me for it.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
@@ -381,7 +410,64 @@ async function run(){
 }
 function finish(btn){btn.disabled=false;btn.textContent="Build the board";}
 
-function persistBoard(top,date){
+function renderStreaks(pool0){
+  const el=els("streaks");
+  const HEAD=id=>`https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_120,q_auto:best/v1/people/${id}/headshot/67/current`;
+  const hot=pool0.filter(c=>c.streak!=null&&c.streak>=5).sort((a,b)=>b.streak-a.streak).slice(0,8);
+  if(!hot.length){el.style.display="none";el.innerHTML="";return;}
+  el.style.display="block";
+  el.innerHTML=`<h2 class="sechead">Streak <span class="acc">Watch</span></h2>
+    <p class="secsub">Active hit streaks among today's rated bats (games with an official at-bat; walk-only games don't break a streak).</p>`+
+    hot.map(c=>`<div class="strow">
+      <span class="pic"><img src="${HEAD(c.id)}" alt="" loading="lazy" onerror="this.style.display='none'"></span>
+      <div style="min-width:0">
+        <div class="nm">${c.name}</div>
+        <div class="meta">${c.teamAbbr||""}${c.oppAbbr?" vs "+c.oppAbbr:""}${c.recentAVG!=null?` · ${c.recentAVG.toFixed(3).replace(/^0/,"")} last ${c.recentGames}`:""}</div>
+      </div>
+      <div class="stk">${c.streak}<small>GAME STREAK</small></div>
+    </div>`).join("");
+}
+
+async function loadRecord(){
+  const el=els("record");
+  let j=null;
+  try{
+    // Grade any pending past days first (no-op if nothing to grade), then read the record.
+    await fetch("/.netlify/functions/track?action=grade").catch(()=>{});
+    const r=await fetch("/.netlify/functions/track?action=record");if(r.ok)j=await r.json();
+  }catch(e){}
+  if(!j||!j.summary){el.innerHTML="";return;}
+  const s=j.summary;
+  if(!s.gradedDays){
+    el.innerHTML=`<h2 class="sechead">Track <span class="acc">Record</span></h2>
+      <div class="recwrap"><div class="secsub" style="margin:0">No graded days yet. Today's board is saved automatically when you build it; results get checked against the box scores overnight. Come back tomorrow.</div></div>`;
+    return;
+  }
+  const pct=v=>v==null?"—":(v*100).toFixed(1)+"%";
+  const bandLbl=b=>b.lo===0?"<60%":(b.hi>1?"75%+":Math.round(b.lo*100)+"–"+Math.round(b.hi*100)+"%");
+  const bands=s.bands.filter(b=>b.n>0).map(b=>{
+    const r=b.hits/b.n;
+    return `<div class="bandrow"><span class="lbl">${bandLbl(b)}</span><span class="bar"><i style="width:${Math.round(r*100)}%"></i></span><span class="val">${b.hits}/${b.n} · ${Math.round(r*100)}%</span></div>`;
+  }).join("");
+  const days=(j.days||[]).filter(d=>d.graded).slice(0,7).map(d=>{
+    const hs=d.picks.filter(p=>p.outcome==="hit").length,ms=d.picks.filter(p=>p.outcome==="miss").length;
+    const chips=d.picks.map(p=>{
+      const cls=p.outcome==="hit"?"hit":(p.outcome==="miss"?"miss":"");
+      const mark=p.outcome==="hit"?"✓":(p.outcome==="miss"?"✗":"–");
+      return `<span class="pickchip ${cls}">${mark} ${p.name.split(" ").slice(-1)[0]}</span>`;
+    }).join("");
+    return `<div class="dayrow"><b>${d.date}</b> · ${hs}-for-${hs+ms}${d.picks.some(p=>p.outcome==="dnp")?" (DNP excluded)":""}<br>${chips}</div>`;
+  }).join("");
+  const small=s.picks<50?`<p class="secsub" style="margin-top:10px">Small sample (${s.picks} graded picks) — treat the percentages as noisy until there's a few weeks of data.</p>`:"";
+  el.innerHTML=`<h2 class="sechead">Track <span class="acc">Record</span></h2>
+    <div class="recwrap">
+      <div class="recbig">${s.hits}/${s.picks} · ${pct(s.rate)}<small>picks that got a hit, across ${s.gradedDays} graded day${s.gradedDays===1?"":"s"}${s.dnp?` · ${s.dnp} DNP excluded`:""}</small></div>
+      <div style="margin-top:14px">${bands||""}</div>
+      ${days}${small}
+    </div>`;
+}
+
+function persistBoard(top,date,games){
   try{
     const tracked=top.map(c=>({id:c.id,name:c.name,teamAbbr:c.teamAbbr,oppAbbr:c.oppAbbr,teamId:c.teamId,
       gamePk:c.gamePk,isHome:c.isHome,hitScore:c.pFinal,confirmed:c.confirmed,slot:c.slot}));
@@ -389,6 +475,13 @@ function persistBoard(top,date){
     localStorage.setItem("hitboard.date",date);
     localStorage.setItem("hitboard.builtAt",new Date().toISOString());
     localStorage.setItem("hitboard.proxy",JSON.stringify({use:els("useProxy").checked,prefix:els("proxyUrl").value.trim()}));
+  }catch(e){}
+  // Fire-and-forget: log today's picks server-side so they get graded overnight.
+  try{
+    const fp=(games||[]).map(g=>g.gameDate).filter(Boolean).sort()[0]||null;
+    fetch("/.netlify/functions/track?action=save",{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({date,firstPitch:fp,picks:top.map(c=>({id:c.id,name:c.name,team:c.teamAbbr,opp:c.oppAbbr,
+        prob:c.pFinal,gamePk:c.gamePk,confirmed:c.confirmed}))})}).catch(()=>{});
   }catch(e){}
 }
 
