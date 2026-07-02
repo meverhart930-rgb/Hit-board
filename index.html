@@ -213,7 +213,7 @@
       <div class="panel" id="howPanel">
         <h4>What the numbers mean</h4>
         <p><b>Hit score</b> — our estimate of the chance this batter gets at least one hit today, calibrated to realistic hit rates (roughly the 50–82% range real hitters live in). It's an estimate, so it's best for comparing and ranking players rather than as an exact betting line.</p>
-        <p><b>Contact skill</b> — the foundation. A batter who gets a hit in 30% of at-bats (a .300 average) starts much higher than a .240 hitter. This is most of the score.</p>
+        <p><b>Contact skill</b> — the foundation, now built from two parts: how often a batter puts the ball in play (strikeouts and walks cost hit chances — this part is stable, real skill) and what happens when he does (noisier, so it leans toward league average). Two .280 hitters aren't equal: the low-strikeout one gets more swings that can become hits. The opposing pitcher is judged the same way — his strikeout rate counts separately from what happens on contact.</p>
         <p><b>Statcast luck check (xBA)</b> — expected batting average from how hard and where he hits the ball. If his real average is higher than his xBA, he's been a bit lucky and we trim him; if lower, he's been unlucky and we bump him.</p>
         <p><b>Pitcher &amp; platoon</b> — a pitcher who gives up lots of hits raises the score; a tough one lowers it. We also use how the batter hits that pitcher's hand (lefty vs righty), which is a real, repeatable edge.</p>
         <p><b>Park, weather &amp; form</b> — hitter-friendly parks and warm air nudge it up; recent form is a small factor because hot streaks mostly just reflect good hitters. Batter-vs-pitcher history is shown but barely counted — the samples are too small to trust.</p>
@@ -307,7 +307,7 @@ const ROOFED=new Set([109,117,136,140,141,146,158,139]);
 const PARKHR={115:1.09,113:1.18,147:1.12,110:1.08,143:1.07,119:1.05,145:1.05,108:1.02,158:1.03,144:1.02,117:1.03,140:1.02,141:1.02,142:1.02,111:1.02,109:1.03,139:0.98,114:0.98,120:1.00,112:1.00,121:0.97,138:0.95,135:0.95,136:0.92,116:0.92,133:0.90,134:0.90,118:0.90,146:0.86,137:0.82};
 const parkFactor=id=>PARK[id]??1.00;
 const parkHR=id=>PARKHR[id]??1.00;
-let LGRATE={avg:0.243,hit:0.220,hr:0.031,base:0.66};
+let LGRATE={avg:0.243,hit:0.220,hr:0.031,base:0.66,con:0.72,hpc:0.31};
 const PA_BY_SLOT={1:4.7,2:4.6,3:4.5,4:4.4,5:4.3,6:4.1,7:4.0,8:3.9,9:3.8};
 
 async function pool(items,fn,conc=5){
@@ -344,8 +344,8 @@ async function run(){
     if(!games.length){setStatus("No MLB games on <code>"+date+"</code>. Regular season runs late March through September.");return finish(btn);}
 
     setStatus("Loading league hitting + pitching lines…",false,true);
-    const [hitMap,lgAVG,lgHitPerPA,lgHRperPA]=await loadHitting(season);
-    LGRATE={avg:lgAVG,hit:lgHitPerPA,hr:lgHRperPA,base:1-Math.pow(1-lgHitPerPA,4.3)};
+    const [hitMap,lgAVG,lgHitPerPA,lgHRperPA,lgCon,lgHPC]=await loadHitting(season);
+    LGRATE={avg:lgAVG,hit:lgHitPerPA,hr:lgHRperPA,base:1-Math.pow(1-lgHitPerPA,4.3),con:lgCon,hpc:lgHPC};
     const pitMap=await loadPitching(season);
     const savantMap=await loadSavant(season);
     for(const [id,line] of hitMap){const s=savantMap.get(id);line.xba=s?s.xba:null;line.xwoba=s?s.xwoba:null;}
@@ -487,22 +487,26 @@ function persistBoard(top,date,games){
 
 async function loadHitting(season){
   const j=await api(`/api/v1/stats?stats=season&group=hitting&season=${season}&gameType=R&sportId=1&playerPool=All&limit=3000`);
-  const splits=j.stats?.[0]?.splits||[];const map=new Map();let H=0,AB=0,PA=0,HR=0;
+  const splits=j.stats?.[0]?.splits||[];const map=new Map();let H=0,AB=0,PA=0,HR=0,K=0,BB=0,HBP=0,SF=0;
   for(const s of splits){const st=s.stat||{},ab=+st.atBats||0,h=+st.hits||0,hr=+st.homeRuns||0;
-    const pa=+st.plateAppearances||(ab+(+st.baseOnBalls||0)+(+st.hitByPitch||0)+(+st.sacFlies||0)+(+st.sacBunts||0));
-    if(ab<5)continue;H+=h;AB+=ab;PA+=(pa||ab);HR+=hr;
+    const k=+st.strikeOuts||0,bb=+st.baseOnBalls||0,hbp=+st.hitByPitch||0,sf=+st.sacFlies||0;
+    const pa=+st.plateAppearances||(ab+bb+hbp+sf+(+st.sacBunts||0));
+    if(ab<5)continue;H+=h;AB+=ab;PA+=(pa||ab);HR+=hr;K+=k;BB+=bb;HBP+=hbp;SF+=sf;
     map.set(s.player.id,{id:s.player.id,name:s.player.fullName,teamId:s.team?.id,pos:s.player.primaryPosition?.abbreviation,
       bats:s.player.batSide?.code,avg:+st.avg||(h/Math.max(ab,1)),obp:+st.obp||0,slg:+st.slg||0,ops:+st.ops||0,
-      ab,h,hr,pa:pa||ab,k:+st.strikeOuts||0,kRate:pa?(+st.strikeOuts||0)/pa:0});}
+      ab,h,hr,pa:pa||ab,k,bb,hbp,sf,kRate:pa?k/pa:0});}
   const lgAVG=AB?H/AB:0.245, lgHitPerPA=PA?H/PA:0.22, lgHRperPA=PA?HR/PA:0.031;
-  return [map,lgAVG,lgHitPerPA,lgHRperPA];
+  const lgContactPerPA=PA?Math.max((PA-K-BB-HBP)/PA,0.5):0.72;         // PAs ending with the ball in play (or a hit)
+  const lgHitPerContact=(AB-K+SF)>0?H/(AB-K+SF):0.31;                  // hit rate once contact happens
+  return [map,lgAVG,lgHitPerPA,lgHRperPA,lgContactPerPA,lgHitPerContact];
 }
 async function loadPitching(season){
   const j=await api(`/api/v1/stats?stats=season&group=pitching&season=${season}&gameType=R&sportId=1&playerPool=All&limit=3000`);
   const splits=j.stats?.[0]?.splits||[];const map=new Map();
   for(const s of splits){const st=s.stat||{};
     map.set(s.player.id,{id:s.player.id,name:s.player.fullName,hand:s.player.pitchHand?.code,
-      oppAVG:+st.avg||0,whip:+st.whip||0,era:+st.era||0,k9:+st.strikeoutsPer9Inn||0,bf:+st.battersFaced||0,hr:+st.homeRuns||0});}
+      oppAVG:+st.avg||0,whip:+st.whip||0,era:+st.era||0,k9:+st.strikeoutsPer9Inn||0,bf:+st.battersFaced||0,hr:+st.homeRuns||0,
+      k:+st.strikeOuts||0,bb:+st.baseOnBalls||0,hbp:+st.hitBatsmen||0,h:+st.hits||0,abA:+st.atBats||0});}
   return map;
 }
 async function loadWeather(g){
@@ -531,8 +535,21 @@ function addSide(out,hitMap,pitMap,players,team,opp,oppPP,ctx,confirmed,isHome){
   else{for(const l of hitMap.values()){if(l.teamId!==team.id||l.pos==="P"||l.pa<30)continue;out.push(mk(l,null));}}
 }
 
-// shrink hit-per-PA toward league mean (stabilizes small samples), realistic bounds
-function perPA(c){const K0=60,lg=LGRATE.hit;const q=(c.h+K0*lg)/(Math.max(c.pa,0)+K0);return clamp(q,0.10,0.34);}
+// Component model: q = P(contact per PA) x P(hit per contact).
+// Contact rate (driven by K%/BB%) stabilizes fast -> light shrink (60 PA prior).
+// Hit-per-contact is BABIP-noisy -> heavy shrink (250-contact prior).
+// This is why two .270 hitters differ: the low-strikeout one makes more hit attempts.
+function perPA(c){
+  const lg=LGRATE.hit;
+  const contacts=(c.ab||0)-(c.k||0)+(c.sf||0);
+  const outsOfPlay=(c.k||0)+(c.bb||0)+(c.hbp||0);
+  if(c.pa>0&&contacts>0&&c.h<=contacts&&outsOfPlay<c.pa){
+    const con=((c.pa-outsOfPlay)+60*LGRATE.con)/(c.pa+60);
+    const hpc=(c.h+250*LGRATE.hpc)/(contacts+250);
+    return clamp(con*hpc,0.10,0.34);
+  }
+  const K0=60,q=(c.h+K0*lg)/(Math.max(c.pa,0)+K0);return clamp(q,0.10,0.34); // fallback: old shrunk H/PA
+}
 const expPA=c=>c.slot?(PA_BY_SLOT[c.slot]||4.2):4.3;
 const probFrom=(p,pa)=>1-Math.pow(1-p,pa);
 // calibration: the raw multiplicative model overspreads, so compress toward the true league base rate
@@ -557,7 +574,19 @@ function scoreBase(c,lg){
   if(c.xba!=null&&c.xba>0&&c.avg>0){const trueAVG=W.xba*c.xba+(1-W.xba)*c.avg;const rel=clamp(trueAVG/c.avg,0.80,1.20);pX=p*rel;}
   const rX=probFrom(pX,pa);
   let pPit=pX;
-  if(c.oppPitcher&&c.oppPitcher.oppAVG>0&&c.oppPitcher.bf>=80){const rel=clamp(c.oppPitcher.oppAVG/lg,0.72,1.30);pPit=pX*(1+W.pit*(rel-1));}
+  if(c.oppPitcher&&c.oppPitcher.bf>=80){
+    const P=c.oppPitcher;let rel=null;
+    // Component view of the pitcher, mirroring the batter model:
+    // (a) how often he lets the ball get in play (K/BB-driven, stable -> trusted)
+    // (b) what happens on contact (noisy -> shrunk hard toward league)
+    if(P.k>0&&P.abA>0&&P.h!=null&&(P.k+P.bb+P.hbp)<P.bf){
+      const conA=((P.bf-P.k-P.bb-P.hbp)+100*LGRATE.con)/(P.bf+100);
+      const contacts=Math.max(P.abA-P.k,1);
+      const hpcA=(P.h+300*LGRATE.hpc)/(contacts+300);
+      rel=(conA/LGRATE.con)*(hpcA/LGRATE.hpc);
+    }else if(P.oppAVG>0){rel=P.oppAVG/lg;}
+    if(rel!=null){rel=clamp(rel,0.72,1.30);pPit=pX*(1+W.pit*(rel-1));}
+  }
   const r1=probFrom(pPit,pa);
   const ef=envFactor(c);const pEnv=pPit*(1+W.env*(ef-1));const r2=probFrom(pEnv,pa);
   c.pBase=cal(r2);c._perPA=pEnv;c._p0=cal(r0);c._px=cal(rX);c._p1=cal(r1);c._p2=cal(r2);c._ef=ef;
