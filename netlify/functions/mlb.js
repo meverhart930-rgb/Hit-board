@@ -77,10 +77,11 @@ exports.handler = async (event) => {
     // ---- Baseball Savant expected statistics (xBA / xwOBA) ----
     if (qs.savant === "expected") {
       const year = (qs.year || "").replace(/[^0-9]/g, "") || String(new Date().getFullYear());
-      const ckey = "savant:" + year;
+      const kind = qs.type === "pitcher" ? "pitcher" : "batter";
+      const ckey = "savant:" + kind + ":" + year;
       const cached = cacheGet(ckey, 6 * 3600 * 1000); // 6h
       if (cached) return { statusCode: 200, headers: { ...CORS, "cache-control": "public, max-age=21600" }, body: cached.body };
-      const url = `https://baseballsavant.mlb.com/leaderboard/expected_statistics?type=batter&year=${year}&position=&team=&min=10&csv=true`;
+      const url = `https://baseballsavant.mlb.com/leaderboard/expected_statistics?type=${kind}&year=${year}&position=&team=&min=10&csv=true`;
       const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0", "Accept": "text/csv" } });
       if (!r.ok) return { statusCode: r.status, headers: CORS, body: JSON.stringify({ error: "savant " + r.status }) };
       const csv = await r.text();
