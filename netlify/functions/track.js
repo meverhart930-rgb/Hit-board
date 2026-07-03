@@ -71,23 +71,32 @@ async function grade() {
     const snap = await s.get(key, { type: "json" }).catch(() => null);
     if (!snap || snap.graded) continue;
 
-    // Age in days: if a game never finalizes (postponed), grade anyway after 3 days.
     const ageDays = Math.floor((Date.parse(today) - Date.parse(snap.date)) / 86400000);
+    // ONE call per day: which of the day's games are final.
+    const finals = await fetchFinals(snap.date);
+    if (!finals && ageDays < 3) continue; // schedule unreachable; retry next run
+
     const boxCache = new Map();
     let allSettled = true;
     const results = [];
 
     for (const p of snap.picks) {
       if (!p.gamePk) { results.push({ ...p, outcome: "dnp" }); continue; }
+      const isFinal = finals ? finals.get(p.gamePk) === true : false;
+      if (!isFinal) {
+        if (ageDays < 3) { allSettled = false; results.push({ ...p, outcome: "pending" }); }
+        else results.push({ ...p, outcome: "dnp" }); // postponed/stale -> void
+        continue;
+      }
       let box = boxCache.get(p.gamePk);
       if (box === undefined) {
         box = await fetchBox(p.gamePk);
         boxCache.set(p.gamePk, box);
       }
-      if (!box) { allSettled = false; results.push({ ...p, outcome: "pending" }); continue; }
-      if (!box.final) {
-        if (ageDays < 3) { allSettled = false; results.push({ ...p, outcome: "pending" }); continue; }
-        results.push({ ...p, outcome: "dnp" }); continue; // stale/postponed after 3 days -> void
+      if (!box) {
+        if (ageDays < 3) { allSettled = false; results.push({ ...p, outcome: "pending" }); }
+        else results.push({ ...p, outcome: "dnp" });
+        continue;
       }
       const st = box.players["ID" + p.id];
       const ab = st ? (+st.atBats || 0) : 0;
@@ -107,12 +116,22 @@ async function grade() {
   return json({ ok: true, graded: doneDays });
 }
 
+async function fetchFinals(date) {
+  try {
+    const r = await fetch(`${MLB}/api/v1/schedule?sportId=1&date=${date}`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    const m = new Map();
+    for (const g of (j.dates?.[0]?.games || [])) m.set(g.gamePk, (g.status?.abstractGameState || "") === "Final");
+    return m;
+  } catch { return null; }
+}
+
 async function fetchBox(gamePk) {
   try {
     const r = await fetch(`${MLB}/api/v1/game/${gamePk}/boxscore`);
     if (!r.ok) return null;
     const j = await r.json();
-    const status = await gameFinal(gamePk);
     const players = {};
     for (const side of ["home", "away"]) {
       const ps = j.teams?.[side]?.players || {};
@@ -121,17 +140,8 @@ async function fetchBox(gamePk) {
         if (batting) players[k] = batting;
       }
     }
-    return { final: status, players };
+    return { players };
   } catch { return null; }
-}
-
-async function gameFinal(gamePk) {
-  try {
-    const r = await fetch(`${MLB}/api/v1.1/game/${gamePk}/feed/live?fields=gameData,status,abstractGameState`);
-    if (!r.ok) return false;
-    const j = await r.json();
-    return (j.gameData?.status?.abstractGameState || "") === "Final";
-  } catch { return false; }
 }
 
 async function record() {
@@ -163,6 +173,7 @@ async function record() {
   }
   return json({
     days: days.slice(-10).reverse(), // newest first, last 10 days for the panel
-    summary: { gradedDays, picks: n, hits, rate: n ? hits / n : null, dnp, bands }
+    summary: { gradedDays, picks: n, hits, rate: n ? hits / n : null, dnp, bands,
+      totalDays: days.length, pendingDays: days.filter(d => !d.graded).length }
   });
 }
