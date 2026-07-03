@@ -213,7 +213,7 @@
       <div class="panel" id="howPanel">
         <h4>What the numbers mean</h4>
         <p><b>Hit score</b> — our estimate of the chance this batter gets at least one hit today, calibrated to realistic hit rates (roughly the 50–82% range real hitters live in). It's an estimate, so it's best for comparing and ranking players rather than as an exact betting line.</p>
-        <p><b>Contact skill</b> — the foundation, now built from two parts: how often a batter puts the ball in play (strikeouts and walks cost hit chances — this part is stable, real skill) and what happens when he does (noisier, so it leans toward league average). Two .280 hitters aren't equal: the low-strikeout one gets more swings that can become hits. The opposing pitcher is judged the same way — his strikeout rate counts separately from what happens on contact.</p>
+        <p><b>Contact skill</b> — the foundation, now built from two parts: how often a batter puts the ball in play (strikeouts and walks cost hit chances — this part is stable, real skill) and what happens when he does (noisier, so it leans toward league average). Two .280 hitters aren't equal: the low-strikeout one gets more swings that can become hits. The opposing pitcher is judged the same way — strikeout rate separate from contact quality, with his contact quality cross-checked against Statcast expected results so a lucky defense doesn't flatter him. And since your batter only faces the starter two or three times, the opposing bullpen covers the remaining at-bats.</p>
         <p><b>Statcast luck check (xBA)</b> — expected batting average from how hard and where he hits the ball, i.e. what his contact <i>should</i> be earning. When his real average is above his xBA, the results have outrun the contact (running hot — we trim). When it's below, his contact deserves more than it's gotten (shortchanged — we bump, because results tend to catch up to contact).</p>
         <p><b>Pitcher &amp; platoon</b> — a pitcher who gives up lots of hits raises the score; a tough one lowers it. We also use how the batter hits that pitcher's hand (lefty vs righty), which is a real, repeatable edge.</p>
         <p><b>Park, weather &amp; form</b> — hitter-friendly parks and warm air nudge it up; recent form is a small factor because hot streaks mostly just reflect good hitters. Batter-vs-pitcher history is shown but barely counted — the samples are too small to trust.</p>
@@ -291,9 +291,9 @@ async function api(path){
   if(!r.ok) throw new Error("HTTP "+r.status+" on "+path);
   return r.json();
 }
-async function loadSavant(season){
+async function loadSavant(season,kind){
   try{
-    const r=await fetch(FN+"?savant=expected&year="+season);
+    const r=await fetch(FN+"?savant=expected&year="+season+(kind==="pitcher"?"&type=pitcher":""));
     if(!r.ok)return new Map();
     const arr=await r.json();const m=new Map();
     for(const p of arr){if(p&&p.id)m.set(p.id,p);}
@@ -308,6 +308,7 @@ const PARKHR={115:1.09,113:1.18,147:1.12,110:1.08,143:1.07,119:1.05,145:1.05,108
 const parkFactor=id=>PARK[id]??1.00;
 const parkHR=id=>PARKHR[id]??1.00;
 let LGRATE={avg:0.243,hit:0.220,hr:0.031,base:0.66,con:0.72,hpc:0.31};
+let BULLPEN=new Map();
 const PA_BY_SLOT={1:4.7,2:4.6,3:4.5,4:4.4,5:4.3,6:4.1,7:4.0,8:3.9,9:3.8};
 
 async function pool(items,fn,conc=5){
@@ -348,6 +349,9 @@ async function run(){
     LGRATE={avg:lgAVG,hit:lgHitPerPA,hr:lgHRperPA,base:1-Math.pow(1-lgHitPerPA,4.3),con:lgCon,hpc:lgHPC};
     const pitMap=await loadPitching(season);
     const savantMap=await loadSavant(season);
+    const savantPit=await loadSavant(season,"pitcher");
+    for(const [id,P] of pitMap){const s=savantPit.get(id);P.pxba=s?s.xba:null;}
+    BULLPEN=buildBullpen(pitMap);
     for(const [id,line] of hitMap){const s=savantMap.get(id);line.xba=s?s.xba:null;line.xwoba=s?s.xwoba:null;}
 
     const today=new Date();today.setHours(0,0,0,0);
@@ -504,10 +508,32 @@ async function loadPitching(season){
   const j=await api(`/api/v1/stats?stats=season&group=pitching&season=${season}&gameType=R&sportId=1&playerPool=All&limit=3000`);
   const splits=j.stats?.[0]?.splits||[];const map=new Map();
   for(const s of splits){const st=s.stat||{};
-    map.set(s.player.id,{id:s.player.id,name:s.player.fullName,hand:s.player.pitchHand?.code,
+    map.set(s.player.id,{id:s.player.id,name:s.player.fullName,hand:s.player.pitchHand?.code,teamId:s.team?.id,
       oppAVG:+st.avg||0,whip:+st.whip||0,era:+st.era||0,k9:+st.strikeoutsPer9Inn||0,bf:+st.battersFaced||0,hr:+st.homeRuns||0,
-      k:+st.strikeOuts||0,bb:+st.baseOnBalls||0,hbp:+st.hitBatsmen||0,h:+st.hits||0,abA:+st.atBats||0});}
+      k:+st.strikeOuts||0,bb:+st.baseOnBalls||0,hbp:+st.hitBatsmen||0,h:+st.hits||0,abA:+st.atBats||0,
+      games:+st.gamesPlayed||0,gs:+st.gamesStarted||0});}
   return map;
+}
+// Per-team relief corps quality: hits-allowed pressure relative to league, same component
+// math as the starter (contact allowed x quality on contact). Aggregates are big samples.
+function buildBullpen(pitMap){
+  const agg=new Map();
+  for(const P of pitMap.values()){
+    if(!P.teamId||P.bf<30)continue;
+    if(P.games>0&&P.gs/P.games>=0.5)continue; // mostly a starter -> not bullpen
+    const a=agg.get(P.teamId)||{bf:0,k:0,bb:0,hbp:0,h:0,abA:0};
+    a.bf+=P.bf;a.k+=P.k;a.bb+=P.bb;a.hbp+=P.hbp;a.h+=P.h;a.abA+=P.abA;
+    agg.set(P.teamId,a);
+  }
+  const out=new Map();
+  for(const [tid,a] of agg){
+    if(a.bf<200)continue;
+    const conA=(a.bf-a.k-a.bb-a.hbp)/a.bf;
+    const contacts=Math.max(a.abA-a.k,1);
+    const hpcA=a.h/contacts;
+    out.set(tid,clamp((conA/LGRATE.con)*(hpcA/LGRATE.hpc),0.80,1.20));
+  }
+  return out;
 }
 async function loadWeather(g){
   try{
@@ -574,17 +600,25 @@ function scoreBase(c,lg){
   if(c.xba!=null&&c.xba>0&&c.avg>0){const trueAVG=W.xba*c.xba+(1-W.xba)*c.avg;const rel=clamp(trueAVG/c.avg,0.80,1.20);pX=p*rel;}
   const rX=probFrom(pX,pa);
   let pPit=pX;
-  if(c.oppPitcher&&c.oppPitcher.bf>=80){
-    const P=c.oppPitcher;let rel=null;
-    // Component view of the pitcher, mirroring the batter model:
-    // (a) how often he lets the ball get in play (K/BB-driven, stable -> trusted)
-    // (b) what happens on contact (noisy -> shrunk hard toward league)
-    if(P.k>0&&P.abA>0&&P.h!=null&&(P.k+P.bb+P.hbp)<P.bf){
-      const conA=((P.bf-P.k-P.bb-P.hbp)+100*LGRATE.con)/(P.bf+100);
-      const contacts=Math.max(P.abA-P.k,1);
-      const hpcA=(P.h+300*LGRATE.hpc)/(contacts+300);
-      rel=(conA/LGRATE.con)*(hpcA/LGRATE.hpc);
-    }else if(P.oppAVG>0){rel=P.oppAVG/lg;}
+  {
+    const P=c.oppPitcher;let relS=null;
+    if(P&&P.bf>=80){
+      // Starter, component view: contact allowed (stable, trusted) x quality on contact (shrunk).
+      if(P.k>0&&P.abA>0&&P.h!=null&&(P.k+P.bb+P.hbp)<P.bf){
+        const conA=((P.bf-P.k-P.bb-P.hbp)+100*LGRATE.con)/(P.bf+100);
+        const contacts=Math.max(P.abA-P.k,1);
+        let hpcA=(P.h+300*LGRATE.hpc)/(contacts+300);
+        // Savant xBA-against: what his contact quality *should* allow, defense and luck removed.
+        if(P.pxba!=null&&P.pxba>0&&P.oppAVG>0){const rel=clamp((0.5*P.pxba+0.5*P.oppAVG)/P.oppAVG,0.85,1.15);hpcA*=rel;}
+        relS=(conA/LGRATE.con)*(hpcA/LGRATE.hpc);
+      }else if(P.oppAVG>0){relS=P.oppAVG/lg;}
+    }
+    // Blend: he faces the starter ~2.6 times, the bullpen the rest.
+    const relPen=BULLPEN.get(c.oppId)||null;
+    const pa=expPA(c);
+    let rel=null;
+    if(relS!=null&&relPen!=null){const sPA=Math.min(2.6,pa);rel=(sPA*relS+(pa-sPA)*relPen)/pa;}
+    else rel=relS!=null?relS:relPen;
     if(rel!=null){rel=clamp(rel,0.72,1.30);pPit=pX*(1+W.pit*(rel-1));}
   }
   const r1=probFrom(pPit,pa);
@@ -650,7 +684,9 @@ const DLABEL={pit:"Pitcher matchup",xba:"Luck check (xBA)",plat:"Platoon (L/R)",
 const DCOLOR={pit:"var(--clay)",xba:"var(--xba)",plat:"var(--plat)",env:"var(--env)",form:"var(--form)",bvp:"var(--bvp)"};
 function driverText(key,c,lg){
   if(key==="pit"){if(!c.oppPitcher)return null;const oa=c.oppPitcher.oppAVG;const nm=c.oppPitcherName||"This pitcher";
-    return oa>=lg?`${nm} gives up a lot of hits this year (${oa.toFixed(3)} allowed vs ${lg.toFixed(3)} league), so the matchup helps.`:`${nm} is tough, holding hitters to ${oa.toFixed(3)} (league is ${lg.toFixed(3)}), so the matchup works against him.`;}
+    const kr=c.oppPitcher.bf>0?c.oppPitcher.k/c.oppPitcher.bf:null;
+    const kBit=kr!=null&&kr>=0.27?" and misses a lot of bats":(kr!=null&&kr<=0.17?" and rarely strikes anyone out":"");
+    return oa>=lg?`${nm} gives up a lot of hits this year (${oa.toFixed(3)} allowed vs ${lg.toFixed(3)} league)${kBit}, so the matchup helps. The bullpen behind him is factored in too.`:`${nm} is tough, holding hitters to ${oa.toFixed(3)} (league is ${lg.toFixed(3)})${kBit}, so the matchup works against him. The bullpen behind him is factored in too.`;}
   if(key==="xba"){if(c.xba==null)return null;return c.xba<c.avg?`His contact quality says he should be hitting about ${c.xba.toFixed(3).replace(/^0/,"")}, but he's at ${c.avg.toFixed(3).replace(/^0/,"")} — the results have outrun the contact (lucky so far), so we trim the score.`:`His contact quality says he should be hitting about ${c.xba.toFixed(3).replace(/^0/,"")}, but he's only at ${c.avg.toFixed(3).replace(/^0/,"")} — the results have lagged the contact (shortchanged so far), so we nudge the score up.`;}
   if(key==="plat"){const sp=relSplit(c);if(!sp)return null;const hand=c.oppHand==="L"?"left-handed":"right-handed";return sp.avg>=c.avg?`He hits ${hand} pitching well (${sp.avg.toFixed(3)}), and today's starter is ${hand} — a matchup edge.`:`He hits ${hand} pitching worse (${sp.avg.toFixed(3)}) than usual, and today's starter is ${hand} — a tougher day.`;}
   if(key==="env"){const p=[];if(c.parkF>1.01)p.push("a hitter-friendly park");else if(c.parkF<0.99)p.push("a pitcher-friendly park");if(c.wx&&!c.wx.roof&&typeof c.wx.temp==="number"){if(c.wx.temp>=85)p.push("warm air that helps the ball carry");else if(c.wx.temp<=50)p.push("cold air that suppresses offense");}if(c.wx&&c.wx.roof)p.push("a climate-controlled roof");return p.length?`Playing in ${p.join(" and ")}.`:`Park and weather are close to neutral today.`;}
