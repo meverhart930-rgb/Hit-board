@@ -119,6 +119,7 @@
   .chip.rain{color:#7fb6ff;border-color:#3a5587}
   .chip.flag{color:var(--bvp);border-color:#3a5587}
   .chip.xba{color:var(--xba);border-color:#8a4d6b}
+  .chip.flame{color:#ffb03a;border-color:#8a6a2e;background:rgba(255,176,58,.08)}
   .chip .dn{opacity:.7}
 
   .detail{display:none;padding:4px 18px 18px 64px;border-top:1px solid var(--line);margin-top:2px}
@@ -707,6 +708,7 @@ function render(top,lg){
     // ---- collapsed chips: only what matters at a glance ----
     const chips=[];
     chips.push(c.confirmed?`<span class="chip green">Confirmed${c.slot?` · bats ${c.slot}`:""}</span>`:`<span class="chip warn">Projected lineup</span>`);
+    if(c.streak!=null&&c.streak>=5)chips.push(`<span class="chip flame">🔥 ${c.streak}-game hit streak</span>`);
     if(c.wx&&!c.wx.roof&&c.wx.precip!=null&&c.wx.precip>=50)chips.push(`<span class="chip rain">⚠ Rain-out risk ${c.wx.precip}%</span>`);
     if(c.xba!=null&&c.xba>0){const d=c.xba-c.avg;if(d>=0.012)chips.push(`<span class="chip xba">▲ due better results</span>`);else if(d<=-0.012)chips.push(`<span class="chip xba">▼ running hot</span>`);}
     if(c.pa<120)chips.push(`<span class="chip warn">Small sample</span>`);
