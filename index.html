@@ -227,7 +227,7 @@
         <label for="date">Slate date</label>
         <input type="date" id="date" />
       </div>
-      <button class="run" id="run">Build the board</button>
+      <button class="run" id="run">Generate Hit List</button>
       <a class="ghost" id="liveLink" href="live.html" style="text-decoration:none;display:inline-flex;align-items:center">Live box scores →</a>
     </div>
 
@@ -259,7 +259,7 @@
     <div class="lnote" id="lineupNote" style="display:none"></div>
   </header>
 
-  <div id="status" class="status">Pick a date and build the board. Lineups firm up ~1–3 hours before first pitch — earlier than that you get projected pools, flagged on each card. Weather only loads for today and the next ~16 days.</div>
+  <div id="status" class="status">Pick a date and generate the hit list. Lineups firm up ~1–3 hours before first pitch — earlier than that you get projected pools, flagged on each card. Weather only loads for today and the next ~16 days.</div>
   <div class="board" id="board"></div>
 
   <section id="streaks" style="display:none"></section>
@@ -418,11 +418,11 @@ async function run(){
     loadRecord();
   }catch(e){
     console.error(e);
-    setStatus("Couldn't reach the data feeds — a source may be down or your connection blocked the request. Wait a minute and tap <b>Build the board</b> again.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
+    setStatus("Couldn't reach the data feeds — a source may be down or your connection blocked the request. Wait a minute and tap <b>Generate Hit List</b> again.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
   }
   finish(btn);
 }
-function finish(btn){btn.disabled=false;btn.textContent="Build the board";}
+function finish(btn){btn.disabled=false;btn.textContent="Generate Hit List";}
 
 function renderStreaks(pool0){
   const el=els("streaks");
