@@ -166,6 +166,7 @@
 
   footer{margin-top:40px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:12.5px;line-height:1.6}
   /* ---- streak watch + track record ---- */
+  .taphint{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.04em;color:var(--muted);text-align:center;margin:6px 0 12px;padding:8px 10px;border:1px dashed var(--line);border-radius:var(--radius)}
   .sechead{font-family:"Anton",sans-serif;text-transform:uppercase;letter-spacing:.08em;font-size:clamp(20px,4.6vw,28px);margin:34px 0 4px;color:var(--chalk)}
   .sechead .acc{color:var(--amber)}
   .secsub{color:var(--muted);font-size:13px;margin:0 0 14px}
@@ -262,6 +263,7 @@
   </header>
 
   <div id="status" class="status">Pick a date and generate the hit list. Lineups firm up ~1–3 hours before first pitch — earlier than that you get projected pools, flagged on each card. Weather only loads for today and the next ~16 days.</div>
+  <div id="taphint" class="taphint" style="display:none">Tap a player to expand — why he's ranked, what's moving his score, and the full stat line.</div>
   <div class="board" id="board"></div>
 
   <section id="streaks" style="display:none"></section>
@@ -713,6 +715,7 @@ function driverText(key,c,lg){
 
 function render(top,lg){
   const board=els("board");board.innerHTML="";
+  els("taphint").style.display=top.length?"block":"none";
   top.forEach((c,i)=>{
     const cn=c.contrib;
     // ---- breakdown bar (kept, but tucked into "show all") ----
