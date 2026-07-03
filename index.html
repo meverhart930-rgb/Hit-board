@@ -33,7 +33,12 @@
   h1 .acc{color:var(--amber)}
   .brand-kick{display:block;font-family:"Anton",sans-serif;font-size:clamp(20px,5.4vw,36px);letter-spacing:.24em;text-transform:uppercase;color:var(--chalk);opacity:.9;margin:0 0 0 2px}
   .brandrow{display:flex;align-items:center;gap:16px;margin-top:4px;margin-bottom:14px}
-  .brandlogo{height:clamp(210px,59vw,400px);width:auto;flex:0 0 auto;border-radius:14px;border:2px solid var(--redsolid);background:#f3ede1;box-shadow:0 6px 24px rgba(0,0,0,.5);display:block}
+  .logoframe{position:relative;flex:0 0 auto;display:block}
+  .logoframe::before{content:"";position:absolute;left:3%;right:3%;top:15%;bottom:0;border-radius:16px;
+    background:linear-gradient(168deg,#ff6b7d 0%,#e4002b 42%,#74001a 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 14px 34px rgba(0,0,0,.55),0 5px 18px rgba(228,0,43,.38)}
+  .brandlogo{height:clamp(204px,55vw,400px);width:auto;display:block;position:relative;z-index:1;
+    border-radius:0 0 14px 14px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.45))}
   .brandtext{min-width:0}
 
   h1.wordmark{font-family:"Anton","Archivo",sans-serif;font-weight:400;font-stretch:normal;text-transform:uppercase;letter-spacing:.006em;white-space:nowrap;display:inline-block;
@@ -204,7 +209,7 @@
 <div class="wrap">
   <header>
     <div class="brandrow">
-      <img class="brandlogo" src="honky-jefe.jpeg" alt="Honky Jefe mascot" width="784" height="1168">
+      <span class="logoframe"><img class="brandlogo" src="honky-jefe-cut.png" alt="Honky Jefe mascot" width="586" height="800"></span>
       <div class="brandtext">
         <span class="brand-kick">Honky Jefe's</span>
         <h1 class="wordmark">Hit<br><span class="acc">List</span></h1>
