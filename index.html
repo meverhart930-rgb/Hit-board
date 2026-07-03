@@ -281,19 +281,25 @@ function base(){
   return {proxy:false,prefix:""};
 }
 const FN="/.netlify/functions/mlb";
+// fetch with a hard timeout: a request that never answers can't hang the build
+async function fetchT(url,ms,opts){
+  const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);
+  try{return await fetch(url,Object.assign({},opts||{},{signal:c.signal}));}
+  finally{clearTimeout(t);}
+}
 async function api(path){
   // 1) Netlify function (CORS-safe, also unlocks Savant). Falls back if not deployed.
-  try{const r=await fetch(FN+"?path="+encodeURIComponent(path));if(r.ok)return await r.json();}catch(e){}
+  try{const r=await fetchT(FN+"?path="+encodeURIComponent(path),12000);if(r.ok)return await r.json();}catch(e){}
   // 2) user proxy or direct fetch
   const b=base();
   const full=b.proxy?b.prefix+encodeURIComponent(DIRECT_BASE+path):DIRECT_BASE+path;
-  const r=await fetch(full,{headers:{accept:"application/json"}});
+  const r=await fetchT(full,15000,{headers:{accept:"application/json"}});
   if(!r.ok) throw new Error("HTTP "+r.status+" on "+path);
   return r.json();
 }
 async function loadSavant(season,kind){
   try{
-    const r=await fetch(FN+"?savant=expected&year="+season+(kind==="pitcher"?"&type=pitcher":""));
+    const r=await fetchT(FN+"?savant=expected&year="+season+(kind==="pitcher"?"&type=pitcher":""),12000);
     if(!r.ok)return new Map();
     const arr=await r.json();const m=new Map();
     for(const p of arr){if(p&&p.id)m.set(p.id,p);}
@@ -359,7 +365,11 @@ async function run(){
     let wxByGame={};
     if(F.weather && isFuture){
       setStatus("Checking conditions…",false,true);
-      await pool(games,async g=>{ wxByGame[g.gamePk]=await loadWeather(g); },5);
+      // Whole stage capped: if weather stalls, build without it rather than hang.
+      await Promise.race([
+        pool(games,async g=>{ wxByGame[g.gamePk]=await loadWeather(g); },5),
+        new Promise(res=>setTimeout(res,15000))
+      ]);
     }
 
     const cands=[];let confirmedGames=0;
@@ -408,7 +418,7 @@ async function run(){
     loadRecord();
   }catch(e){
     console.error(e);
-    setStatus("Couldn't reach the MLB Stats API — most likely the browser blocking the cross-origin request (CORS).<br><br>1. Open <b>Tune &amp; filter ▾</b>, tick <code>Route MLB calls through CORS proxy</code>, paste a proxy prefix.<br>2. Better: deploy a tiny Netlify Function so it's same-origin and CORS can't bite. Ask me for it.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
+    setStatus("Couldn't reach the data feeds — a source may be down or your connection blocked the request. Wait a minute and tap <b>Build the board</b> again.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
   }
   finish(btn);
 }
@@ -541,7 +551,7 @@ async function loadWeather(g){
     if(ROOFED.has(id))return {roof:true};
     const d=(g.gameDate||"").slice(0,10);
     const u=`https://api.open-meteo.com/v1/forecast?latitude=${c[0]}&longitude=${c[1]}&hourly=temperature_2m,precipitation_probability,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&start_date=${d}&end_date=${d}`;
-    const r=await fetch(u);if(!r.ok)return null;const j=await r.json();
+    const r=await fetchT(u,6000);if(!r.ok)return null;const j=await r.json();
     const H=j.hourly;if(!H||!H.time)return null;
     const gt=new Date(g.gameDate).getTime();let bi=0,bd=1e15;
     H.time.forEach((t,i)=>{const dd=Math.abs(new Date(t).getTime()-gt);if(dd<bd){bd=dd;bi=i;}});
