@@ -228,11 +228,10 @@
         <input type="date" id="date" />
       </div>
       <button class="run" id="run">Build the board</button>
-      <button class="ghost" id="toggleDrawer">Tune &amp; filter ▾</button>
       <a class="ghost" id="liveLink" href="live.html" style="text-decoration:none;display:inline-flex;align-items:center">Live box scores →</a>
     </div>
 
-    <div class="drawer" id="drawer">
+    <div class="drawer" id="drawer" style="display:none" aria-hidden="true">
       <div>
         <h4>Signal weights — how much each moves the score</h4>
         <div class="wkrow">
@@ -326,7 +325,7 @@ bindSlider("w-pit","pit","v-pit");bindSlider("w-plat","plat","v-plat");bindSlide
 els("f-minpa").addEventListener("input",e=>{F.minPA=+e.target.value;els("v-minpa").textContent=e.target.value;});
 els("f-confirmed").addEventListener("change",e=>{F.confirmedOnly=e.target.checked;userTouchedConfirmed=true;});
 els("f-weather").addEventListener("change",e=>F.weather=e.target.checked);
-els("toggleDrawer").addEventListener("click",()=>{const d=els("drawer");const o=d.classList.toggle("open");els("toggleDrawer").textContent=o?"Tune & filter ▴":"Tune & filter ▾";});
+
 els("howBtn").addEventListener("click",()=>{const p=els("howPanel");const o=p.classList.toggle("open");els("howBtn").setAttribute("aria-expanded",o);els("howBtn").textContent=o?"How this works ▴":"How this works ▾";});
 
 (function(){const d=new Date();els("date").value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);loadRecord();})();
