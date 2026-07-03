@@ -455,8 +455,12 @@ async function loadRecord(){
   if(!j||!j.summary){el.innerHTML="";return;}
   const s=j.summary;
   if(!s.gradedDays){
+    const t=s.totalDays||0,p=s.pendingDays||0;
+    const msg=t===0
+      ?"No boards logged yet. Generate today's hit list and it's saved automatically; results get graded once the games go final."
+      :`${p} day${p===1?"":"s"} saved and awaiting grading. Grading runs automatically when you open this page after that day's games are final — check back after tonight's slate wraps, or tomorrow morning.`;
     el.innerHTML=`<h2 class="sechead">Track <span class="acc">Record</span></h2>
-      <div class="recwrap"><div class="secsub" style="margin:0">No graded days yet. Today's board is saved automatically when you build it; results get checked against the box scores overnight. Come back tomorrow.</div></div>`;
+      <div class="recwrap"><div class="secsub" style="margin:0">${msg}</div></div>`;
     return;
   }
   const pct=v=>v==null?"—":(v*100).toFixed(1)+"%";
