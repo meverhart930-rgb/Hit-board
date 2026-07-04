@@ -172,6 +172,8 @@
   footer{margin-top:40px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:12.5px;line-height:1.6}
   /* ---- streak watch + track record ---- */
   .taphint{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.04em;color:var(--muted);text-align:center;margin:6px 0 12px;padding:8px 10px;border:1px dashed var(--line);border-radius:var(--radius)}
+  .sharebtn{display:inline-flex;align-items:center;background:rgba(228,0,43,.10);color:var(--amber);border:1.5px solid var(--clay-dim);cursor:pointer;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em;padding:10px 20px;border-radius:var(--radius);font-stretch:90%}
+  .sharebtn:hover{background:rgba(228,0,43,.18)}
   .sechead{font-family:"Anton",sans-serif;text-transform:uppercase;letter-spacing:.08em;font-size:clamp(20px,4.6vw,28px);margin:34px 0 4px;color:var(--chalk)}
   .sechead .acc{color:var(--amber)}
   .secsub{color:var(--muted);font-size:13px;margin:0 0 14px}
@@ -268,6 +270,7 @@
 
   <div id="status" class="status">Pick a date and generate the hit list. Lineups firm up ~1–3 hours before first pitch — earlier than that you get projected pools, flagged on each card. Weather only loads for today and the next ~16 days.</div>
   <div id="taphint" class="taphint" style="display:none">Tap a player to expand — why he's ranked, what's moving his score, and the full stat line.</div>
+  <div id="sharewrap" style="display:none;text-align:center;margin:0 0 14px"><button id="shareBtn" class="sharebtn">Share this list</button></div>
   <div class="board" id="board"></div>
 
   <section id="streaks" style="display:none"></section>
@@ -323,6 +326,7 @@ const parkFactor=id=>PARK[id]??1.00;
 const parkHR=id=>PARKHR[id]??1.00;
 let LGRATE={avg:0.243,hit:0.220,hr:0.031,base:0.66,con:0.72,hpc:0.31};
 let BULLPEN=new Map();
+let LASTTOP=null,LASTDATE=null;
 const PA_BY_SLOT={1:4.7,2:4.6,3:4.5,4:4.4,5:4.3,6:4.1,7:4.0,8:3.9,9:3.8};
 
 async function pool(items,fn,conc=5){
@@ -340,6 +344,7 @@ els("f-minpa").addEventListener("input",e=>{F.minPA=+e.target.value;els("v-minpa
 els("f-confirmed").addEventListener("change",e=>{F.confirmedOnly=e.target.checked;userTouchedConfirmed=true;});
 els("f-weather").addEventListener("change",e=>F.weather=e.target.checked);
 
+els("shareBtn").addEventListener("click",shareList);
 els("howBtn").addEventListener("click",()=>{const p=els("howPanel");const o=p.classList.toggle("open");els("howBtn").setAttribute("aria-expanded",o);els("howBtn").textContent=o?"How this works ▴":"How this works ▾";});
 
 (function(){const d=new Date();els("date").value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);loadRecord();})();
@@ -421,6 +426,7 @@ async function run(){
     pool0.sort((a,b)=>b.pFinal-a.pFinal);
     const top=pool0.slice(0,10);
     clearStatus();renderSlate(games.length,confirmedGames,lgAVG,F.weather&&isFuture);render(top,lgAVG);
+    LASTTOP=top;LASTDATE=date;
     renderStreaks(pool0);
     persistBoard(top,date,games);
     loadRecord();
@@ -431,6 +437,63 @@ async function run(){
   finish(btn);
 }
 function finish(btn){btn.disabled=false;btn.textContent="Generate Hit List";}
+
+// ---- share card: renders the top 10 as a branded image for texting/posting ----
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});}
+async function shareList(){
+  if(!LASTTOP||!LASTTOP.length)return;
+  const btn=els("shareBtn");btn.disabled=true;btn.textContent="Building card…";
+  try{
+    await Promise.all(['400 30px "Anton"','400 96px "Anton"','800 34px "Archivo"','500 24px "IBM Plex Mono"','600 34px "Inter"','400 24px "Inter"']
+      .map(f=>document.fonts.load(f)));
+    const W=1080,H=1350,c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");
+    // background
+    x.fillStyle="#0a1f44";x.fillRect(0,0,W,H);
+    const g=x.createRadialGradient(W/2,-150,80,W/2,-150,900);
+    g.addColorStop(0,"#14315f");g.addColorStop(1,"rgba(20,49,95,0)");x.fillStyle=g;x.fillRect(0,0,W,H);
+    // mascot
+    try{const m=await loadImg("honky-jefe-cut.png");const mh=300,mw=mh*(m.width/m.height);
+      x.save();x.shadowColor="rgba(0,0,0,.5)";x.shadowBlur=24;x.shadowOffsetY=8;x.drawImage(m,44,36,mw,mh);x.restore();}catch(e){}
+    // lockup
+    x.textBaseline="alphabetic";
+    x.fillStyle="rgba(255,255,255,.92)";x.font='400 34px "Anton"';x.fillText("H O N K Y   J E F E ' S",300,120);
+    x.font='400 108px "Anton"';
+    const hitW=x.measureText("HIT ").width;
+    x.fillStyle="#ffffff";x.fillText("HIT ",300,218);
+    x.fillStyle="#ff4d63";x.fillText("LIST",300+hitW,218);
+    x.fillStyle="#e4002b";x.fillRect(300,240,hitW+x.measureText("LIST").width,10);
+    // date
+    x.fillStyle="#a6b8d9";x.font='500 26px "IBM Plex Mono"';x.fillText(LASTDATE+"  ·  top 10 to record a hit",300,296);
+    // rows
+    const top=LASTTOP.slice(0,10);const y0=380,rh=86;
+    for(let i=0;i<top.length;i++){
+      const cnd=top[i],y=y0+i*rh;
+      if(i>0){x.strokeStyle="#26437a";x.lineWidth=1;x.beginPath();x.moveTo(60,y-rh/2+14);x.lineTo(W-60,y-rh/2+14);x.stroke();}
+      x.fillStyle="#ff4d63";x.font='400 44px "Anton"';x.textAlign="right";x.fillText(String(i+1),118,y);
+      x.textAlign="left";
+      const flame=(cnd.streak!=null&&cnd.streak>=5)?" 🔥":"";
+      x.fillStyle="#ffffff";x.font='600 34px "Inter"';x.fillText(cnd.name+flame,150,y-8);
+      x.fillStyle="#a6b8d9";x.font='400 24px "Inter"';
+      x.fillText((cnd.teamAbbr||"")+(cnd.oppAbbr?(cnd.isHome?" vs ":" @ ")+cnd.oppAbbr:"")+(cnd.oppPitcherName?"  ·  "+cnd.oppPitcherName:""),150,y+24);
+      x.fillStyle="#ff4d63";x.font='400 46px "Anton"';x.textAlign="right";
+      x.fillText((cnd.pFinal*100).toFixed(1)+"%",W-64,y+4);x.textAlign="left";
+    }
+    // footer
+    x.fillStyle="#7288b4";x.font='500 24px "IBM Plex Mono"';x.textAlign="center";
+    x.fillText("honky-jefes-hit-list.netlify.app",W/2,H-64);
+    x.fillText("an estimate, not a promise",W/2,H-30);x.textAlign="left";
+    const blob=await new Promise(r=>c.toBlob(r,"image/png"));
+    if(!blob)throw new Error("canvas export failed");
+    const file=new File([blob],"honky-jefes-hit-list-"+LASTDATE+".png",{type:"image/png"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:"Honky Jefe's Hit List"});
+    }else{
+      const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=file.name;a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    }
+  }catch(e){if(e&&e.name!=="AbortError")alert("Couldn't build the share card: "+(e.message||e));}
+  btn.disabled=false;btn.textContent="Share this list";
+}
 
 function renderStreaks(pool0){
   const el=els("streaks");
@@ -720,6 +783,7 @@ function driverText(key,c,lg){
 function render(top,lg){
   const board=els("board");board.innerHTML="";
   els("taphint").style.display=top.length?"block":"none";
+  els("sharewrap").style.display=top.length?"block":"none";
   top.forEach((c,i)=>{
     const cn=c.contrib;
     // ---- breakdown bar (kept, but tucked into "show all") ----
