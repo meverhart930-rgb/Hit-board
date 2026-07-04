@@ -47,7 +47,7 @@
   h1.wordmark .acc{color:var(--amber)}
   @supports ((-webkit-background-clip:text) or (background-clip:text)){
     h1.wordmark .acc{
-      background:url("list-pattern.jpeg") 50% 42%/145% auto no-repeat;
+      background:url("list-pattern2.jpeg") 50% 30%/220% auto no-repeat;
       -webkit-background-clip:text;background-clip:text;
       color:transparent;-webkit-text-fill-color:transparent;
       text-shadow:none;
@@ -480,9 +480,10 @@ async function shareList(){
     x.fillStyle="#ffffff";x.fillText("HIT ",300,218);
     let listFill="#ff4d63";
     try{
-      const sw=await loadImg("list-pattern.jpeg");
-      const pc=document.createElement("canvas");pc.width=360;pc.height=Math.round(360*sw.height/sw.width);
-      pc.getContext("2d").drawImage(sw,0,0,pc.width,pc.height);
+      const sw=await loadImg("list-pattern2.jpeg");
+      const pc=document.createElement("canvas");pc.width=420;pc.height=190;
+      const bandH=sw.width*0.45,bandY=Math.max(0,sw.height*0.30-bandH/2);
+      pc.getContext("2d").drawImage(sw,0,bandY,sw.width,bandH,0,0,pc.width,pc.height);
       listFill=x.createPattern(pc,"repeat")||listFill;
     }catch(e){}
     x.fillStyle=listFill;x.fillText("LIST",300+hitW,218);
