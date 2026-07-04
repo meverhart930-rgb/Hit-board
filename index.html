@@ -45,6 +45,15 @@
     font-size:clamp(92px,25vw,190px);line-height:.86;margin:0 0 4px;color:var(--chalk);
     text-shadow:0 2px 0 rgba(0,0,0,.35),0 7px 18px rgba(0,0,0,.5)}
   h1.wordmark .acc{color:var(--amber)}
+  @supports ((-webkit-background-clip:text) or (background-clip:text)){
+    h1.wordmark .acc{
+      background:url("poncho-swatch.jpg") 50% 45%/cover no-repeat;
+      -webkit-background-clip:text;background-clip:text;
+      color:transparent;-webkit-text-fill-color:transparent;
+      text-shadow:none;
+      filter:drop-shadow(0 2px 0 rgba(0,0,0,.35)) drop-shadow(0 7px 18px rgba(0,0,0,.5));
+    }
+  }
   h1.wordmark::after{content:"";display:block;width:100%;height:7px;background:var(--redsolid);border-radius:3px;margin-top:.16em;box-shadow:0 0 18px rgba(228,0,43,.45)}
   .sub{color:var(--muted);max-width:64ch;font-size:14.5px}
 
@@ -376,13 +385,22 @@ async function run(){
     const today=new Date();today.setHours(0,0,0,0);
     const isFuture=(new Date(date+"T00:00")>=today);
     let wxByGame={};
+    let wxState="off";
     if(F.weather && isFuture){
       setStatus("Checking conditions…",false,true);
-      // Whole stage capped: if weather stalls, build without it rather than hang.
-      await Promise.race([
-        pool(games,async g=>{ wxByGame[g.gamePk]=await loadWeather(g); },5),
-        new Promise(res=>setTimeout(res,15000))
-      ]);
+      // Probe one open-air stadium first: if weather is unreachable, skip the rest instantly.
+      const probeGame=games.find(g=>!ROOFED.has(g.teams.home.team.id))||games[0];
+      const probe=await Promise.race([loadWeather(probeGame),new Promise(r=>setTimeout(()=>r("WXDOWN"),7000))]);
+      if(probe==="WXDOWN"||probe==null){
+        wxState="down";
+      }else{
+        wxByGame[probeGame.gamePk]=probe;
+        await Promise.race([
+          pool(games.filter(g=>g!==probeGame),async g=>{ wxByGame[g.gamePk]=await loadWeather(g); },5),
+          new Promise(res=>setTimeout(res,15000))
+        ]);
+        wxState="on";
+      }
     }
 
     const cands=[];let confirmedGames=0;
@@ -425,7 +443,7 @@ async function run(){
 
     pool0.sort((a,b)=>b.pFinal-a.pFinal);
     const top=pool0.slice(0,10);
-    clearStatus();renderSlate(games.length,confirmedGames,lgAVG,F.weather&&isFuture);render(top,lgAVG);
+    clearStatus();renderSlate(games.length,confirmedGames,lgAVG,wxState);render(top,lgAVG);
     LASTTOP=top;LASTDATE=date;
     renderStreaks(pool0);
     persistBoard(top,date,games);
@@ -460,7 +478,14 @@ async function shareList(){
     x.font='400 108px "Anton"';
     const hitW=x.measureText("HIT ").width;
     x.fillStyle="#ffffff";x.fillText("HIT ",300,218);
-    x.fillStyle="#ff4d63";x.fillText("LIST",300+hitW,218);
+    let listFill="#ff4d63";
+    try{
+      const sw=await loadImg("poncho-swatch.jpg");
+      const pc=document.createElement("canvas");pc.width=240;pc.height=Math.round(240*sw.height/sw.width);
+      pc.getContext("2d").drawImage(sw,0,0,pc.width,pc.height);
+      listFill=x.createPattern(pc,"repeat")||listFill;
+    }catch(e){}
+    x.fillStyle=listFill;x.fillText("LIST",300+hitW,218);
     x.fillStyle="#e4002b";x.fillRect(300,240,hitW+x.measureText("LIST").width,10);
     // date
     x.fillStyle="#a6b8d9";x.font='500 26px "IBM Plex Mono"';x.fillText(LASTDATE+"  ·  top 10 to record a hit",300,296);
@@ -474,7 +499,7 @@ async function shareList(){
       const flame=(cnd.streak!=null&&cnd.streak>=5)?" 🔥":"";
       x.fillStyle="#ffffff";x.font='600 34px "Inter"';x.fillText(cnd.name+flame,150,y-8);
       x.fillStyle="#a6b8d9";x.font='400 24px "Inter"';
-      x.fillText((cnd.teamAbbr||"")+(cnd.oppAbbr?(cnd.isHome?" vs ":" @ ")+cnd.oppAbbr:"")+(cnd.oppPitcherName?"  ·  SP "+cnd.oppPitcherName:""),150,y+24);
+      x.fillText((cnd.teamAbbr||"")+(cnd.oppAbbr?(cnd.isHome?" vs ":" @ ")+cnd.oppAbbr:"")+(cnd.oppPitcherName?"  ·  SP "+cnd.oppPitcherName+((cnd.oppPitcher&&cnd.oppPitcher.era>0)?" ("+cnd.oppPitcher.era.toFixed(2)+" ERA)":""):""),150,y+24);
       x.fillStyle="#ff4d63";x.font='400 46px "Anton"';x.textAlign="right";
       x.fillText((cnd.pFinal*100).toFixed(1)+"%",W-64,y+4);x.textAlign="left";
     }
@@ -765,7 +790,8 @@ async function enrichBvP(c,season){
 
 function renderSlate(n,conf,lg,wx){
   const s=els("slate");s.style.display="flex";
-  s.innerHTML=`<span>Slate · <b>${n}</b> games</span><span>Confirmed lineups · <b>${conf}/${n}</b></span><span>League AVG · <b>${lg.toFixed(3)}</b></span><span>Weather · <b>${wx?"on":"off"}</b></span>`;
+  const wlbl=wx==="on"?"on":(wx==="down"?"unavailable — skipped":"off");
+  s.innerHTML=`<span>Slate · <b>${n}</b> games</span><span>Confirmed lineups · <b>${conf}/${n}</b></span><span>League AVG · <b>${lg.toFixed(3)}</b></span><span>Weather · <b>${wlbl}</b></span>`;
 }
 const pct=x=>(x*100).toFixed(1)+"%";
 const signed=x=>{const v=x*100;return (v>=0?"+":"")+v.toFixed(1);};
@@ -850,7 +876,9 @@ function render(top,lg){
     const tId=c.logoTeamId||c.teamId;
     const tImg=`<img class="logo sm" src="${TLOGO(tId)}" alt="" onerror="${HIDE}">`;
     const oImg=c.oppId?`<img class="logo sm" src="${TLOGO(c.oppId)}" alt="" onerror="${HIDE}">`:"";
-    const matchup=`${tImg}${c.teamAbbr} ${c.isHome?"vs":"@"} ${oImg}${c.oppAbbr} · <span class="vs">SP ${c.oppPitcherName||"TBD"}</span>${(c.oppPitcherName&&c.oppHand)?` <span class="hand">(${c.oppHand==="L"?"LHP":"RHP"})</span>`:""}`;
+    const pmeta=[(c.oppPitcherName&&c.oppHand)?(c.oppHand==="L"?"LHP":"RHP"):null,
+      (c.oppPitcher&&c.oppPitcher.era>0)?c.oppPitcher.era.toFixed(2)+" ERA":null].filter(Boolean).join(", ");
+    const matchup=`${tImg}${c.teamAbbr} ${c.isHome?"vs":"@"} ${oImg}${c.oppAbbr} · <span class="vs">SP ${c.oppPitcherName||"TBD"}</span>${pmeta?` <span class="hand">(${pmeta})</span>`:""}`;
     const avatar=`<span class="avatar"><span class="pic"><img class="headshot" src="${HEAD(c.id)}" alt="" onerror="${HIDE}"></span><img class="teambadge" src="${TLOGO(tId)}" alt="" onerror="${HIDE}"></span>`;
 
     const card=document.createElement("div");card.className="card"+(i<3?" top3":"");
