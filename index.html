@@ -47,7 +47,7 @@
   h1.wordmark .acc{color:var(--amber)}
   @supports ((-webkit-background-clip:text) or (background-clip:text)){
     h1.wordmark .acc{
-      background:url("poncho-swatch.jpg") 50% 45%/cover no-repeat;
+      background:url("poncho-swatch.jpeg") 50% 45%/cover no-repeat;
       -webkit-background-clip:text;background-clip:text;
       color:transparent;-webkit-text-fill-color:transparent;
       text-shadow:none;
@@ -480,7 +480,7 @@ async function shareList(){
     x.fillStyle="#ffffff";x.fillText("HIT ",300,218);
     let listFill="#ff4d63";
     try{
-      const sw=await loadImg("poncho-swatch.jpg");
+      const sw=await loadImg("poncho-swatch.jpeg");
       const pc=document.createElement("canvas");pc.width=240;pc.height=Math.round(240*sw.height/sw.width);
       pc.getContext("2d").drawImage(sw,0,0,pc.width,pc.height);
       listFill=x.createPattern(pc,"repeat")||listFill;
@@ -849,7 +849,7 @@ function render(top,lg){
     if(c.xba!=null&&c.xba>0)kn.push(`<div class="kn"><span class="kl">Expected average (xBA)<span class="kh">what his contact quality should earn — luck removed</span></span><span class="kv">${c.xba.toFixed(3)}</span></div>`);
     if(sp)kn.push(`<div class="kn"><span class="kl">vs ${c.oppHand==="L"?"left":"right"}-handers<span class="kh">how he hits pitchers like today's starter</span></span><span class="kv">${sp.avg.toFixed(3)}</span></div>`);
     if(c.recentAVG!=null)kn.push(`<div class="kn"><span class="kl">Last ${c.recentGames} games<span class="kh">recent form</span></span><span class="kv">${c.recentAVG.toFixed(3)}</span></div>`);
-    if(c.oppPitcher)kn.push(`<div class="kn"><span class="kl">Pitcher allows<span class="kh">${c.oppPitcherName||"opponent"}'s batting average against</span></span><span class="kv">${c.oppPitcher.oppAVG.toFixed(3)}</span></div>`);
+    if(c.oppPitcher)kn.push(`<div class="kn"><span class="kl">Pitcher allows<span class="kh">what hitters bat off SP ${c.oppPitcherName||"the starter"} this season — lower means a tougher pitcher</span></span><span class="kv">${c.oppPitcher.oppAVG.toFixed(3)}</span></div>`);
     if(c.hrProb!=null)kn.push(`<div class="kn"><span class="kl">Home run chance<span class="kh">est. chance of a HR today (park + pitcher adjusted)</span></span><span class="kv">${(c.hrProb*100).toFixed(1)}%</span></div>`);
 
     // ---- full line (hidden behind "show all stats") ----
