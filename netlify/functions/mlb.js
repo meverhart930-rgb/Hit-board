@@ -74,7 +74,7 @@ exports.handler = async (event) => {
   const qs = event.queryStringParameters || {};
 
   try {
-    // ---- Open-Meteo weather proxy (server-side; 30min cache per stadium+date) ----
+    // ---- Weather proxy: NWS primary, Open-Meteo fallback (30min cache per stadium+date) ----
     if (qs.wx) {
       const m = String(qs.wx).match(/^(-?[0-9.]+),(-?[0-9.]+)$/);
       const date = (qs.date || "").replace(/[^0-9-]/g, "");
@@ -83,10 +83,53 @@ exports.handler = async (event) => {
       const ckey = "wx:" + m[1] + "," + m[2] + ":" + date;
       const cached = cacheGet(ckey, 30 * 60 * 1000);
       if (cached) return { statusCode: 200, headers: { ...CORS, "cache-control": "public, max-age=1800" }, body: cached.body };
-      const wurl = `https://api.open-meteo.com/v1/forecast?latitude=${m[1]}&longitude=${m[2]}&hourly=temperature_2m,precipitation_probability,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&start_date=${date}&end_date=${date}`;
-      const wr = await fetch(wurl);
-      if (!wr.ok) return { statusCode: wr.status, headers: CORS, body: JSON.stringify({ error: "open-meteo " + wr.status }) };
-      const body = await wr.text();
+
+      const fetchTO = (url, ms, opts) => {
+        const o = Object.assign({}, opts || {});
+        if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) o.signal = AbortSignal.timeout(ms);
+        return fetch(url, o);
+      };
+      let body = null;
+
+      // 1) National Weather Service (api.weather.gov): two-step, keyless, US coverage
+      try {
+        const UA = { "User-Agent": "honky-jefes-hit-list.netlify.app (MLB hit model weather)", "Accept": "application/geo+json" };
+        const pr = await fetchTO(`https://api.weather.gov/points/${m[1]},${m[2]}`, 4000, { headers: UA });
+        if (pr.ok) {
+          const pj = await pr.json();
+          const furl = pj.properties && pj.properties.forecastHourly;
+          if (furl) {
+            const fr = await fetchTO(furl, 5000, { headers: UA });
+            if (fr.ok) {
+              const fj = await fr.json();
+              const ps = (fj.properties && fj.properties.periods) || [];
+              if (ps.length) {
+                // translate to the Open-Meteo hourly shape the client already parses
+                const hourly = { time: [], temperature_2m: [], precipitation_probability: [], wind_speed_10m: [] };
+                for (const p of ps) {
+                  hourly.time.push(p.startTime);
+                  hourly.temperature_2m.push(p.temperature);
+                  const w = String(p.windSpeed || "").match(/(\d+)\s*mph\s*$/);
+                  hourly.wind_speed_10m.push(w ? +w[1] : 0);
+                  hourly.precipitation_probability.push(p.probabilityOfPrecipitation ? (p.probabilityOfPrecipitation.value ?? 0) : 0);
+                }
+                body = JSON.stringify({ hourly, source: "nws" });
+              }
+            }
+          }
+        }
+      } catch (e) {}
+
+      // 2) Open-Meteo fallback
+      if (!body) {
+        try {
+          const wurl = `https://api.open-meteo.com/v1/forecast?latitude=${m[1]}&longitude=${m[2]}&hourly=temperature_2m,precipitation_probability,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&start_date=${date}&end_date=${date}`;
+          const wr = await fetchTO(wurl, 5000);
+          if (wr.ok) body = await wr.text();
+        } catch (e) {}
+      }
+
+      if (!body) return { statusCode: 502, headers: CORS, body: JSON.stringify({ error: "weather sources unreachable" }) };
       cacheSet(ckey, { body });
       return { statusCode: 200, headers: { ...CORS, "cache-control": "public, max-age=1800" }, body };
     }
