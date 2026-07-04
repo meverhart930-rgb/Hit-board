@@ -474,7 +474,7 @@ async function shareList(){
       const flame=(cnd.streak!=null&&cnd.streak>=5)?" 🔥":"";
       x.fillStyle="#ffffff";x.font='600 34px "Inter"';x.fillText(cnd.name+flame,150,y-8);
       x.fillStyle="#a6b8d9";x.font='400 24px "Inter"';
-      x.fillText((cnd.teamAbbr||"")+(cnd.oppAbbr?(cnd.isHome?" vs ":" @ ")+cnd.oppAbbr:"")+(cnd.oppPitcherName?"  ·  "+cnd.oppPitcherName:""),150,y+24);
+      x.fillText((cnd.teamAbbr||"")+(cnd.oppAbbr?(cnd.isHome?" vs ":" @ ")+cnd.oppAbbr:"")+(cnd.oppPitcherName?"  ·  SP "+cnd.oppPitcherName:""),150,y+24);
       x.fillStyle="#ff4d63";x.font='400 46px "Anton"';x.textAlign="right";
       x.fillText((cnd.pFinal*100).toFixed(1)+"%",W-64,y+4);x.textAlign="left";
     }
@@ -625,8 +625,14 @@ async function loadWeather(g){
     const id=g.teams.home.team.id;const c=COORD[id];if(!c)return null;
     if(ROOFED.has(id))return {roof:true};
     const d=(g.gameDate||"").slice(0,10);
-    const u=`https://api.open-meteo.com/v1/forecast?latitude=${c[0]}&longitude=${c[1]}&hourly=temperature_2m,precipitation_probability,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&start_date=${d}&end_date=${d}`;
-    const r=await fetchT(u,6000);if(!r.ok)return null;const j=await r.json();
+    let j=null;
+    // 1) our function proxy (server-side fetch + 30min cache) — browser networking can't block it
+    try{const r=await fetchT(`${FN}?wx=${c[0]},${c[1]}&date=${d}`,6000);if(r.ok)j=await r.json();}catch(e){}
+    // 2) direct Open-Meteo fallback
+    if(!j||!j.hourly){
+      const u=`https://api.open-meteo.com/v1/forecast?latitude=${c[0]}&longitude=${c[1]}&hourly=temperature_2m,precipitation_probability,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&start_date=${d}&end_date=${d}`;
+      const r=await fetchT(u,6000);if(!r.ok)return null;j=await r.json();
+    }
     const H=j.hourly;if(!H||!H.time)return null;
     const gt=new Date(g.gameDate).getTime();let bi=0,bd=1e15;
     H.time.forEach((t,i)=>{const dd=Math.abs(new Date(t).getTime()-gt);if(dd<bd){bd=dd;bi=i;}});
@@ -780,6 +786,7 @@ function driverText(key,c,lg){
   return null;
 }
 
+function ordinal(n){return n+(["th","st","nd","rd"][((n%100)>10&&(n%100)<14)?0:(n%10<4?n%10:0)]);}
 function render(top,lg){
   const board=els("board");board.innerHTML="";
   els("taphint").style.display=top.length?"block":"none";
@@ -793,7 +800,7 @@ function render(top,lg){
 
     // ---- collapsed chips: only what matters at a glance ----
     const chips=[];
-    chips.push(c.confirmed?`<span class="chip green">Confirmed${c.slot?` · bats ${c.slot}`:""}</span>`:`<span class="chip warn">Projected lineup</span>`);
+    chips.push(c.confirmed?`<span class="chip green">Confirmed${c.slot?` · bats ${ordinal(c.slot)}`:""}</span>`:`<span class="chip warn">Projected lineup</span>`);
     if(c.streak!=null&&c.streak>=5)chips.push(`<span class="chip flame">🔥 ${c.streak}-game hit streak</span>`);
     if(c.wx&&!c.wx.roof&&c.wx.precip!=null&&c.wx.precip>=50)chips.push(`<span class="chip rain">⚠ Rain-out risk ${c.wx.precip}%</span>`);
     if(c.xba!=null&&c.xba>0){const d=c.xba-c.avg;if(d>=0.012)chips.push(`<span class="chip xba">▲ due better results</span>`);else if(d<=-0.012)chips.push(`<span class="chip xba">▼ running hot</span>`);}
@@ -843,7 +850,7 @@ function render(top,lg){
     const tId=c.logoTeamId||c.teamId;
     const tImg=`<img class="logo sm" src="${TLOGO(tId)}" alt="" onerror="${HIDE}">`;
     const oImg=c.oppId?`<img class="logo sm" src="${TLOGO(c.oppId)}" alt="" onerror="${HIDE}">`:"";
-    const matchup=`${tImg}${c.teamAbbr} ${c.isHome?"vs":"@"} ${oImg}${c.oppAbbr} · <span class="vs">${c.oppPitcherName||"pitcher TBD"}</span>${(c.oppPitcherName&&c.oppHand)?` <span class="hand">(${c.oppHand==="L"?"LHP":"RHP"})</span>`:""}`;
+    const matchup=`${tImg}${c.teamAbbr} ${c.isHome?"vs":"@"} ${oImg}${c.oppAbbr} · <span class="vs">SP ${c.oppPitcherName||"TBD"}</span>${(c.oppPitcherName&&c.oppHand)?` <span class="hand">(${c.oppHand==="L"?"LHP":"RHP"})</span>`:""}`;
     const avatar=`<span class="avatar"><span class="pic"><img class="headshot" src="${HEAD(c.id)}" alt="" onerror="${HIDE}"></span><img class="teambadge" src="${TLOGO(tId)}" alt="" onerror="${HIDE}"></span>`;
 
     const card=document.createElement("div");card.className="card"+(i<3?" top3":"");
