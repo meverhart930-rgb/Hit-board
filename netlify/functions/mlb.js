@@ -74,6 +74,23 @@ exports.handler = async (event) => {
   const qs = event.queryStringParameters || {};
 
   try {
+    // ---- Open-Meteo weather proxy (server-side; 30min cache per stadium+date) ----
+    if (qs.wx) {
+      const m = String(qs.wx).match(/^(-?[0-9.]+),(-?[0-9.]+)$/);
+      const date = (qs.date || "").replace(/[^0-9-]/g, "");
+      if (!m || !/^\d{4}-\d{2}-\d{2}$/.test(date))
+        return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: "bad wx params" }) };
+      const ckey = "wx:" + m[1] + "," + m[2] + ":" + date;
+      const cached = cacheGet(ckey, 30 * 60 * 1000);
+      if (cached) return { statusCode: 200, headers: { ...CORS, "cache-control": "public, max-age=1800" }, body: cached.body };
+      const wurl = `https://api.open-meteo.com/v1/forecast?latitude=${m[1]}&longitude=${m[2]}&hourly=temperature_2m,precipitation_probability,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&start_date=${date}&end_date=${date}`;
+      const wr = await fetch(wurl);
+      if (!wr.ok) return { statusCode: wr.status, headers: CORS, body: JSON.stringify({ error: "open-meteo " + wr.status }) };
+      const body = await wr.text();
+      cacheSet(ckey, { body });
+      return { statusCode: 200, headers: { ...CORS, "cache-control": "public, max-age=1800" }, body };
+    }
+
     // ---- Baseball Savant expected statistics (xBA / xwOBA) ----
     if (qs.savant === "expected") {
       const year = (qs.year || "").replace(/[^0-9]/g, "") || String(new Date().getFullYear());
