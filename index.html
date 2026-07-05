@@ -44,7 +44,7 @@
   h1.wordmark{font-family:"Anton","Archivo",sans-serif;font-weight:400;font-stretch:normal;text-transform:uppercase;letter-spacing:.006em;white-space:nowrap;display:inline-block;
     font-size:clamp(92px,25vw,190px);line-height:.86;margin:0 0 4px;color:var(--chalk);
     text-shadow:0 2px 0 rgba(0,0,0,.35),0 7px 18px rgba(0,0,0,.5)}
-  h1.wordmark .acc{color:var(--amber)}
+  h1.wordmark .acc{color:var(--amber);-webkit-text-stroke:2.5px var(--redsolid)}
   @supports ((-webkit-background-clip:text) or (background-clip:text)){
     h1.wordmark .acc{
       background:url("list-pattern2.jpeg") 50% 30%/220% auto no-repeat;
@@ -356,7 +356,25 @@ els("f-weather").addEventListener("change",e=>F.weather=e.target.checked);
 els("shareBtn").addEventListener("click",shareList);
 els("howBtn").addEventListener("click",()=>{const p=els("howPanel");const o=p.classList.toggle("open");els("howBtn").setAttribute("aria-expanded",o);els("howBtn").textContent=o?"How this works ▴":"How this works ▾";});
 
-(function(){const d=new Date();els("date").value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);loadRecord();})();
+(function(){
+  const d=new Date();els("date").value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  loadRecord();
+  // Restore the last build (same date, <12h old) so leaving the page doesn't cost a rebuild.
+  // Deferred a tick: at parse time, later `let` declarations aren't initialized yet.
+  setTimeout(function(){
+  try{
+    const saved=JSON.parse(localStorage.getItem("hitboard.render")||"null");
+    if(saved&&saved.date===els("date").value&&saved.top&&saved.top.length&&(Date.now()-saved.builtAt)<12*3600e3){
+      LASTTOP=saved.top;LASTDATE=saved.date;
+      renderSlate(saved.slate.n,saved.slate.conf,saved.slate.lg,saved.slate.wx);
+      render(saved.top,saved.slate.lg);
+      renderStreaks(saved.hot||[]);
+      const t=new Date(saved.builtAt);
+      setStatus(`Restored the list you built at ${t.getHours()}:${String(t.getMinutes()).padStart(2,"0")}. Lineups may have moved since — tap <b>Generate Hit List</b> for a fresh run.`);
+    }
+  }catch(e){}
+  },0);
+})();
 
 function setStatus(html,err=false,loading=false){const s=els("status");s.style.display="block";s.className="status"+(err?" err":"");s.innerHTML=html+(loading?'<div class="bar-load"><i></i></div>':"");}
 function clearStatus(){els("status").style.display="none";}
@@ -421,9 +439,18 @@ async function run(){
     const confRatio=games.length?confirmedGames/games.length:0;
     if(!userTouchedConfirmed){F.confirmedOnly=confRatio>=0.5;els("f-confirmed").checked=F.confirmedOnly;}
     const ln=els("lineupNote");
-    if(confRatio>=0.999){ln.className="lnote ok";ln.textContent="✓ All lineups confirmed — these picks use real starting lineups.";}
-    else if(confRatio<=0){ln.className="lnote warn";ln.textContent="⚠ No lineups posted yet. Every pick is projected — who actually starts matters more than any stat here. Rebuild 1–3 hours before first pitch.";}
-    else{ln.className="lnote warn";ln.textContent=`⚠ ${confirmedGames} of ${games.length} lineups posted. Confirmed games use real lineups${F.confirmedOnly?" and are shown by default":"; projected picks are tagged"}. Rebuild closer to first pitch for the rest.`;}
+    const fp=games.map(g=>g.gameDate).filter(Boolean).sort()[0];
+    let fpBit="";
+    if(fp){
+      const fpd=new Date(fp),now=new Date();
+      const t=fpd.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+      const w0=new Date(fpd.getTime()-90*60000).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+      const w1=new Date(fpd.getTime()-30*60000).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+      fpBit=now<fpd?` First pitch ${t} — best final build ${w0}–${w1}; the list tracked for the record locks at ${t}.`:"";
+    }
+    if(confRatio>=0.999){ln.className="lnote ok";ln.textContent="✓ All lineups confirmed — these picks use real starting lineups."+fpBit;}
+    else if(confRatio<=0){ln.className="lnote warn";ln.textContent="⚠ No lineups posted yet. Every pick is projected — who actually starts matters more than any stat here."+(fpBit||" Rebuild 1–3 hours before first pitch.");}
+    else{ln.className="lnote warn";ln.textContent=`⚠ ${confirmedGames} of ${games.length} lineups posted. Confirmed games use real lineups${F.confirmedOnly?" and are shown by default":"; projected picks are tagged"}.`+(fpBit||" Rebuild closer to first pitch for the rest.");}
     ln.style.display="block";
 
     let pool0=cands.filter(c=>c.pa>=F.minPA && (!F.confirmedOnly||c.confirmed));
@@ -446,6 +473,12 @@ async function run(){
     clearStatus();renderSlate(games.length,confirmedGames,lgAVG,wxState);render(top,lgAVG);
     LASTTOP=top;LASTDATE=date;
     renderStreaks(pool0);
+    try{
+      const hot=pool0.filter(c=>c.streak!=null&&c.streak>=5).sort((a,b)=>b.streak-a.streak).slice(0,8)
+        .map(c=>({id:c.id,name:c.name,teamAbbr:c.teamAbbr,oppAbbr:c.oppAbbr,streak:c.streak,recentAVG:c.recentAVG,recentGames:c.recentGames}));
+      localStorage.setItem("hitboard.render",JSON.stringify({date,builtAt:Date.now(),
+        slate:{n:games.length,conf:confirmedGames,lg:lgAVG,wx:wxState},top:top,hot}));
+    }catch(e){}
     persistBoard(top,date,games);
     loadRecord();
   }catch(e){
@@ -487,6 +520,7 @@ async function shareList(){
       listFill=x.createPattern(pc,"repeat")||listFill;
     }catch(e){}
     x.fillStyle=listFill;x.fillText("LIST",300+hitW,218);
+    x.strokeStyle="#e4002b";x.lineWidth=6;x.lineJoin="round";x.strokeText("LIST",300+hitW,218);
     x.fillStyle="#e4002b";x.fillRect(300,240,hitW+x.measureText("LIST").width,10);
     // date
     x.fillStyle="#a6b8d9";x.font='500 26px "IBM Plex Mono"';x.fillText(LASTDATE+"  ·  top 10 to record a hit",300,296);
