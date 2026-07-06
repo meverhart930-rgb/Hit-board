@@ -185,6 +185,12 @@
   footer{margin-top:40px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:12.5px;line-height:1.6}
   /* ---- streak watch + track record ---- */
   .taphint{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.04em;color:var(--muted);text-align:center;margin:6px 0 12px;padding:8px 10px;border:1px dashed var(--line);border-radius:var(--radius)}
+  #modeTabs{display:flex;gap:8px;margin:18px 0 10px}
+  .tab{flex:1;background:transparent;border:1.5px solid var(--line);color:var(--muted);cursor:pointer;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em;padding:10px 0;border-radius:var(--radius);font-stretch:90%}
+  .tab.active{background:var(--redsolid);border-color:var(--redsolid);color:#fff}
+  #hrpanel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin:0 0 14px;font-size:13px;color:var(--muted);line-height:1.55}
+  #hrpanel .bt{margin-top:10px}
+  #hrpanel button{background:rgba(91,155,255,.12);color:var(--grass);border:1.5px solid var(--grass);cursor:pointer;font-family:"Archivo",sans-serif;font-weight:800;font-size:14px;padding:9px 16px;border-radius:var(--radius);font-stretch:90%}
   .sharebtn{display:inline-flex;align-items:center;background:rgba(228,0,43,.10);color:var(--amber);border:1.5px solid var(--clay-dim);cursor:pointer;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em;padding:10px 20px;border-radius:var(--radius);font-stretch:90%}
   .sharebtn:hover{background:rgba(228,0,43,.18)}
   .sechead{font-family:"Anton",sans-serif;text-transform:uppercase;letter-spacing:.08em;font-size:clamp(20px,4.6vw,28px);margin:34px 0 4px;color:var(--chalk)}
@@ -287,6 +293,11 @@
   </header>
 
   <div id="status" class="status">Pick a date and generate the hit list. Lineups firm up ~1–3 hours before first pitch — earlier than that you get projected pools, flagged on each card. Weather only loads for today and the next ~16 days.</div>
+  <div id="modeTabs" style="display:none">
+    <button id="tabHit" class="tab active">Hit List</button>
+    <button id="tabHR" class="tab">Long Ball</button>
+  </div>
+  <div id="hrpanel" style="display:none"></div>
   <div id="taphint" class="taphint" style="display:none">Tap a player to expand — why he's ranked, what's moving his score, and the full stat line.</div>
   <div id="sharewrap" style="display:none;text-align:center;margin:0 0 14px"><button id="shareBtn" class="sharebtn">Share this list</button></div>
   <div class="board" id="board"></div>
@@ -344,7 +355,7 @@ const parkFactor=id=>PARK[id]??1.00;
 const parkHR=id=>PARKHR[id]??1.00;
 let LGRATE={avg:0.243,hit:0.220,hr:0.031,base:0.66,con:0.72,hpc:0.31};
 let BULLPEN=new Map();
-let LASTTOP=null,LASTDATE=null;
+let LASTTOP=null,LASTDATE=null,MODE="hit",POOLALL=null,LASTLG=null;
 const PA_BY_SLOT={1:4.7,2:4.6,3:4.5,4:4.4,5:4.3,6:4.1,7:4.0,8:3.9,9:3.8};
 
 async function pool(items,fn,conc=5){
@@ -479,7 +490,9 @@ async function run(){
 
     pool0.sort((a,b)=>b.pFinal-a.pFinal);
     const top=pool0.slice(0,10);
-    clearStatus();renderSlate(games.length,confirmedGames,lgAVG,wxState);render(top,lgAVG);
+    clearStatus();renderSlate(games.length,confirmedGames,lgAVG,wxState);
+    POOLALL=pool0;LASTLG=lgAVG;MODE="hit";setTab();
+    render(top,lgAVG,"hit");
     LASTTOP=top;LASTDATE=date;
     renderStreaks(pool0);
     try{
@@ -497,6 +510,124 @@ async function run(){
   finish(btn);
 }
 function finish(btn){btn.disabled=false;btn.textContent="Generate Hit List";}
+
+// ---------- Hit List / Long Ball tabs ----------
+function setTab(){
+  els("modeTabs").style.display=POOLALL?"flex":"none";
+  els("tabHit").className="tab"+(MODE==="hit"?" active":"");
+  els("tabHR").className="tab"+(MODE==="hr"?" active":"");
+  els("hrpanel").style.display=MODE==="hr"?"block":"none";
+  if(MODE==="hr")renderHRPanel();
+}
+function switchMode(m){
+  if(!POOLALL||MODE===m)return;
+  MODE=m;
+  const top=m==="hr"
+    ? POOLALL.slice().sort((a,b)=>(b.hrProb||0)-(a.hrProb||0)).slice(0,10)
+    : POOLALL.slice(0,10);
+  render(top,LASTLG,m);
+  setTab();
+}
+els("tabHit").addEventListener("click",()=>switchMode("hit"));
+els("tabHR").addEventListener("click",()=>switchMode("hr"));
+
+function renderHRPanel(){
+  const bt=readBacktest();
+  let btHtml;
+  if(bt){
+    const rows=bt.bands.filter(b=>b.n>0).map(b=>{
+      const act=(100*b.hr/b.n).toFixed(1);
+      return `<div class="bandrow"><span class="lbl">said ${b.lbl}</span><span class="bar"><i style="width:${Math.min(100,act*5)}%"></i><b style="left:${Math.min(100,b.tgt*5)}%"></b></span><span class="val">homered ${act}% (${b.hr}/${b.n})</span></div>`;
+    }).join("");
+    btHtml=`<div style="margin-top:10px"><b style="color:var(--chalk)">Backtest — last ${bt.days} days (${bt.picks} picks)</b>${rows}
+      <div style="margin-top:6px">Top pick homered ${bt.top1.hr}/${bt.top1.n} nights (${(100*bt.top1.hr/Math.max(bt.top1.n,1)).toFixed(0)}%).</div>
+      <div style="margin-top:4px;font-size:12px">Backtest, not a live record: it reconstructs stats as of each morning but knows who actually played, so real picks will run a touch worse. Bars use a 0–20% scale.</div></div>`;
+  }else{
+    btHtml=`<div class="bt"><button id="btRun">Run 28-day backtest</button>
+      <span id="btProg" style="margin-left:10px;font-family:'IBM Plex Mono',monospace;font-size:12px"></span>
+      <div style="margin-top:6px;font-size:12px">One-time, ~2–3 minutes: replays the last four weeks with stats reconstructed as of each morning and grades who actually homered. Keep the page open while it runs.</div></div>`;
+  }
+  els("hrpanel").innerHTML=`<b style="color:var(--chalk)">Long Ball — v1.</b> Same pool, re-ranked by home-run chance (batter power, pitcher HR tendency, park). Even a great top pick lands ~15%: most nights the best dinger pick does nothing — that's home runs, not a broken model. Card breakdowns below still describe the <i>hit</i> score in v1.${btHtml}`;
+  const rb=els("btRun");if(rb)rb.addEventListener("click",runBacktest);
+}
+function readBacktest(){try{return JSON.parse(localStorage.getItem("hitlist.hrbt")||"null");}catch(e){return null;}}
+
+// ---------- 28-day HR backtest: point-in-time reconstruction ----------
+function asOf(log,dateStr){ // sums BEFORE dateStr only — no leakage
+  let hr=0,pa=0;for(const g of log){if(g.d<dateStr){hr+=g.hr;pa+=g.pa;}}return {hr,pa};
+}
+function hrProbFrom(batAsOf,pitAsOf,parkFac,lg){
+  let hp=(batAsOf.pa>0)?((batAsOf.hr+120*lg)/(batAsOf.pa+120)):lg;
+  if(pitAsOf&&pitAsOf.pa>=60){const pr=pitAsOf.hr/pitAsOf.pa;hp*=clamp(pr/Math.max(lg,0.001),0.6,1.7);}
+  hp*=parkFac;hp=clamp(hp,0.004,0.13);
+  return 1-Math.pow(1-hp,4.2);
+}
+async function runBacktest(){
+  const prog=els("btProg"),rb=els("btRun");rb.disabled=true;
+  const say=t=>{if(prog)prog.textContent=t;};
+  try{
+    const season=new Date().getFullYear();
+    say("loading league…");
+    const [hitMap]=await loadHitting(season);
+    const days=[];
+    for(let i=28;i>=1;i--){const d=new Date(Date.now()-i*864e5);days.push(new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10));}
+    say("loading schedules…");
+    const sched=new Map();const starters=new Set();
+    await pool(days,async d=>{
+      try{const j=await api(`/api/v1/schedule?sportId=1&date=${d}&hydrate=probablePitcher`);
+        const gs=(j.dates?.[0]?.games||[]).filter(g=>g.status?.abstractGameState==="Final").map(g=>({
+          home:g.teams.home.team.id,away:g.teams.away.team.id,
+          hSP:g.teams.home.probablePitcher?.id||null,aSP:g.teams.away.probablePitcher?.id||null}));
+        gs.forEach(g=>{if(g.hSP)starters.add(g.hSP);if(g.aSP)starters.add(g.aSP);});
+        sched.set(d,gs);
+      }catch(e){sched.set(d,[]);}
+    },5);
+    const bats=[...hitMap.values()].filter(l=>l.pa>=120&&l.pos!=="P");
+    const batLog=new Map(),pitLog=new Map();let done=0;
+    say(`player logs 0/${bats.length}…`);
+    await pool(bats,async b=>{
+      try{const j=await api(`/api/v1/people/${b.id}/stats?stats=gameLog&group=hitting&season=${season}`);
+        batLog.set(b.id,(j.stats?.[0]?.splits||[]).map(s=>({d:s.date,hr:+s.stat.homeRuns||0,pa:+s.stat.plateAppearances||0,opp:s.opponent?.id||null,home:!!s.isHome})));
+      }catch(e){}
+      if(++done%25===0)say(`player logs ${done}/${bats.length}…`);
+    },6);
+    const spIds=[...starters];done=0;
+    say(`pitcher logs 0/${spIds.length}…`);
+    await pool(spIds,async id=>{
+      try{const j=await api(`/api/v1/people/${id}/stats?stats=gameLog&group=pitching&season=${season}`);
+        pitLog.set(id,(j.stats?.[0]?.splits||[]).map(s=>({d:s.date,hr:+s.stat.homeRuns||0,pa:+s.stat.battersFaced||0})));
+      }catch(e){}
+      if(++done%15===0)say(`pitcher logs ${done}/${spIds.length}…`);
+    },6);
+    say("replaying…");
+    const lg=LGRATE.hr;
+    const bands=[{lo:0,hi:.06,lbl:"under 6%",tgt:5,n:0,hr:0},{lo:.06,hi:.09,lbl:"6–9%",tgt:7.5,n:0,hr:0},
+                 {lo:.09,hi:.12,lbl:"9–12%",tgt:10.5,n:0,hr:0},{lo:.12,hi:1,lbl:"12%+",tgt:13.5,n:0,hr:0}];
+    let picks=0,dayCount=0;const top1={n:0,hr:0};
+    for(const d of days){
+      const gs=sched.get(d)||[];if(!gs.length)continue;
+      const cands=[];
+      for(const b of bats){
+        const log=batLog.get(b.id);if(!log)continue;
+        const today=log.find(g=>g.d===d&&g.pa>0);if(!today)continue;
+        const game=gs.find(g=>(today.home&&g.home!==today.opp&&g.away===today.opp)||(!today.home&&g.home===today.opp));
+        const spId=game?(today.home?game.aSP:game.hSP):null;
+        const bat=asOf(log,d);if(bat.pa<60)continue;
+        const pit=spId&&pitLog.get(spId)?asOf(pitLog.get(spId),d):null;
+        const parkFac=parkHR(today.home?(game?game.home:null):(today.opp));
+        cands.push({p:hrProbFrom(bat,pit,parkFac,lg),hr:today.hr>=1});
+      }
+      if(cands.length<30)continue;
+      cands.sort((a,b)=>b.p-a.p);
+      const t10=cands.slice(0,10);dayCount++;
+      t10.forEach((c,i)=>{picks++;const band=bands.find(bd=>c.p>=bd.lo&&c.p<bd.hi);if(band){band.n++;if(c.hr)band.hr++;}
+        if(i===0){top1.n++;if(c.hr)top1.hr++;}});
+    }
+    const result={ranAt:Date.now(),days:dayCount,picks,bands,top1};
+    localStorage.setItem("hitlist.hrbt",JSON.stringify(result));
+    say("done");renderHRPanel();
+  }catch(e){say("failed: "+(e.message||e));rb.disabled=false;}
+}
 
 // ---- share card: renders the top 10 as a branded image for texting/posting ----
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});}
@@ -649,9 +780,11 @@ function persistBoard(top,date,games){
   // Fire-and-forget: log today's picks server-side so they get graded overnight.
   try{
     const fp=(games||[]).map(g=>g.gameDate).filter(Boolean).sort()[0]||null;
+    const hrTop=(POOLALL||[]).slice().sort((a,b)=>(b.hrProb||0)-(a.hrProb||0)).slice(0,10);
     fetch("/.netlify/functions/track?action=save",{method:"POST",headers:{"content-type":"application/json"},
       body:JSON.stringify({date,firstPitch:fp,picks:top.map(c=>({id:c.id,name:c.name,team:c.teamAbbr,opp:c.oppAbbr,
-        prob:c.pFinal,gamePk:c.gamePk,confirmed:c.confirmed}))})}).catch(()=>{});
+        prob:c.pFinal,gamePk:c.gamePk,confirmed:c.confirmed})),
+        hrPicks:hrTop.map(c=>({id:c.id,name:c.name,team:c.teamAbbr,opp:c.oppAbbr,prob:c.hrProb,gamePk:c.gamePk,confirmed:c.confirmed}))})}).catch(()=>{});
   }catch(e){}
 }
 
@@ -869,7 +1002,7 @@ function driverText(key,c,lg){
 }
 
 function ordinal(n){return n+(["th","st","nd","rd"][((n%100)>10&&(n%100)<14)?0:(n%10<4?n%10:0)]);}
-function render(top,lg){
+function render(top,lg,mode){mode=mode||"hit";
   const board=els("board");board.innerHTML="";
   els("taphint").style.display=top.length?"block":"none";
   els("sharewrap").style.display=top.length?"block":"none";
@@ -942,7 +1075,7 @@ function render(top,lg){
       <div class="head" role="button" tabindex="0" aria-expanded="false">
         <div class="rank">${i+1}</div>
         <div class="who"><div class="nmrow">${avatar}<div class="nmwrap"><div class="nm">${c.name}</div><div class="matchup">${matchup}</div></div></div></div>
-        <div class="score"><div><div class="num">${pct(c.pFinal)}</div><div class="lab">hit score</div></div><div class="chev">▸</div></div>
+        <div class="score"><div><div class="num">${mode==="hr"?pct(c.hrProb||0):pct(c.pFinal)}</div><div class="lab">${mode==="hr"?"HR chance":"hit score"}</div></div><div class="chev">▸</div></div>
       </div>
       <div class="chips">${chips.join("")}</div>
       <div class="detail">
