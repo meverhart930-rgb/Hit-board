@@ -41,15 +41,17 @@ async function save(req) {
     if (existing.firstPitch && Date.now() > Date.parse(existing.firstPitch))
       return json({ ok: false, reason: "games underway; keeping original snapshot" });
   }
+  const clean = arr => (Array.isArray(arr) ? arr : []).slice(0, 12).map(p => ({
+    id: +p.id, name: String(p.name || ""), team: p.team || "", opp: p.opp || "",
+    prob: Math.max(0, Math.min(1, +p.prob || 0)), gamePk: +p.gamePk || null,
+    confirmed: !!p.confirmed
+  }));
   const snap = {
     date,
     firstPitch: firstPitch || null,
     savedAt: new Date().toISOString(),
-    picks: picks.slice(0, 12).map(p => ({
-      id: +p.id, name: String(p.name || ""), team: p.team || "", opp: p.opp || "",
-      prob: Math.max(0, Math.min(1, +p.prob || 0)), gamePk: +p.gamePk || null,
-      confirmed: !!p.confirmed
-    })),
+    picks: clean(picks),
+    hrPicks: clean(body.hrPicks),
     graded: false
   };
   await s.setJSON(key, snap);
@@ -106,8 +108,32 @@ async function grade() {
       else results.push({ ...p, outcome: hits >= 1 ? "hit" : "miss", hits, ab });
     }
 
+    // HR picks: same boxes, different outcome (homered / no / dnp)
+    const hrResults = [];
+    for (const p of (snap.hrPicks || [])) {
+      if (!p.gamePk) { hrResults.push({ ...p, outcome: "dnp" }); continue; }
+      const isFinal = finals ? finals.get(p.gamePk) === true : false;
+      if (!isFinal) {
+        if (ageDays < 3) { allSettled = false; hrResults.push({ ...p, outcome: "pending" }); }
+        else hrResults.push({ ...p, outcome: "dnp" });
+        continue;
+      }
+      let box = boxCache.get(p.gamePk);
+      if (box === undefined) { box = await fetchBox(p.gamePk); boxCache.set(p.gamePk, box); }
+      if (!box) {
+        if (ageDays < 3) { allSettled = false; hrResults.push({ ...p, outcome: "pending" }); }
+        else hrResults.push({ ...p, outcome: "dnp" });
+        continue;
+      }
+      const st = box.players["ID" + p.id];
+      const pa = st ? (+st.plateAppearances || +st.atBats || 0) : 0;
+      const hrs = st ? (+st.homeRuns || 0) : 0;
+      if (!st || pa === 0) hrResults.push({ ...p, outcome: "dnp" });
+      else hrResults.push({ ...p, outcome: hrs >= 1 ? "hr" : "no", hrs });
+    }
     if (!allSettled && ageDays < 3) continue; // try again next run
     snap.picks = results;
+    snap.hrPicks = hrResults;
     snap.graded = true;
     snap.gradedAt = new Date().toISOString();
     await s.setJSON(key, snap);
@@ -160,7 +186,13 @@ async function record() {
     { lo: 0.70, hi: 0.75, n: 0, hits: 0 },
     { lo: 0.75, hi: 1.01, n: 0, hits: 0 },
   ];
-  let n = 0, hits = 0, dnp = 0, gradedDays = 0;
+  const hrBands = [
+    { lo: 0.00, hi: 0.06, n: 0, hr: 0 },
+    { lo: 0.06, hi: 0.09, n: 0, hr: 0 },
+    { lo: 0.09, hi: 0.12, n: 0, hr: 0 },
+    { lo: 0.12, hi: 1.01, n: 0, hr: 0 },
+  ];
+  let n = 0, hits = 0, dnp = 0, gradedDays = 0, hrN = 0, hrHit = 0;
   for (const d of days) {
     if (!d.graded) continue;
     gradedDays++;
@@ -170,10 +202,17 @@ async function record() {
       const b = bands.find(b => p.prob >= b.lo && p.prob < b.hi);
       if (b) { b.n++; if (p.outcome === "hit") b.hits++; }
     }
+    for (const p of (d.hrPicks || [])) {
+      if (p.outcome === "dnp" || p.outcome === "pending") continue;
+      hrN++; if (p.outcome === "hr") hrHit++;
+      const b = hrBands.find(b => p.prob >= b.lo && p.prob < b.hi);
+      if (b) { b.n++; if (p.outcome === "hr") b.hr++; }
+    }
   }
   return json({
     days: days.slice(-10).reverse(), // newest first, last 10 days for the panel
     summary: { gradedDays, picks: n, hits, rate: n ? hits / n : null, dnp, bands,
-      totalDays: days.length, pendingDays: days.filter(d => !d.graded).length }
+      totalDays: days.length, pendingDays: days.filter(d => !d.graded).length,
+      hr: { picks: hrN, homers: hrHit, rate: hrN ? hrHit / hrN : null, bands: hrBands } }
   });
 }
