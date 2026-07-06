@@ -45,6 +45,8 @@
     font-size:clamp(92px,25vw,190px);line-height:.86;margin:0 0 4px;color:var(--chalk);
     text-shadow:0 2px 0 rgba(0,0,0,.35),0 7px 18px rgba(0,0,0,.5)}
   h1.wordmark .acc{color:var(--amber);-webkit-text-stroke:2.5px #39ff14}
+  .hitword{display:inline-block;width:1.84em;height:auto;vertical-align:baseline;
+    filter:drop-shadow(0 2px 0 rgba(0,0,0,.35)) drop-shadow(0 7px 18px rgba(0,0,0,.5))}
   @supports ((-webkit-background-clip:text) or (background-clip:text)){
     h1.wordmark .acc{
       background:url("list-pattern2.jpeg") 50% 30%/220% auto no-repeat;
@@ -223,7 +225,7 @@
       <span class="logoframe"><img class="brandlogo" src="honky-jefe-cut.png" alt="Honky Jefe mascot" width="586" height="800"></span>
       <div class="brandtext">
         <span class="brand-kick">Honky Jefe's</span>
-        <h1 class="wordmark">Hit<br><span class="acc">List</span></h1>
+        <h1 class="wordmark"><img class="hitword" src="hit-word.png" alt="HIT" width="754" height="461"><br><span class="acc">List</span></h1>
       </div>
     </div>
 
@@ -509,8 +511,15 @@ async function shareList(){
     x.textBaseline="alphabetic";
     x.fillStyle="rgba(255,255,255,.92)";x.font='400 34px "Anton"';x.fillText("H O N K Y   J E F E ' S",300,120);
     x.font='400 108px "Anton"';
-    const hitW=x.measureText("HIT ").width;
-    x.fillStyle="#ffffff";x.fillText("HIT ",300,218);
+    let hitW;
+    try{
+      const himg=await loadImg("hit-word.png");
+      const bh=90,bw=bh*(himg.width/himg.height);
+      x.drawImage(himg,300,218-bh,bw,bh);
+      hitW=bw+18;
+    }catch(e){
+      x.fillStyle="#ffffff";x.fillText("HIT ",300,218);hitW=x.measureText("HIT ").width;
+    }
     let listFill="#ff4d63";
     try{
       const sw=await loadImg("list-pattern2.jpeg");
