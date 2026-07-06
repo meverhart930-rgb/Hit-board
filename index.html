@@ -22,7 +22,12 @@
   *{box-sizing:border-box}
   html,body{margin:0}
   body{
-    background:radial-gradient(1200px 600px at 50% -200px,#14315f 0%,var(--bg) 60%) fixed,var(--bg);
+    background:
+      radial-gradient(120% 90% at 50% 8%, rgba(0,0,0,0) 58%, rgba(0,0,0,.32) 100%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E"),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.016) 0 1px, rgba(255,255,255,0) 1px 54px),
+      radial-gradient(1200px 600px at 50% -200px,#14315f 0%,var(--bg) 60%),
+      var(--bg);
     color:var(--chalk);font-family:"Inter",system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5;
   }
   .wrap{max-width:1080px;margin:0 auto;padding:28px 18px 80px}
@@ -107,9 +112,23 @@
   @keyframes slide{0%{margin-left:-30%}100%{margin-left:100%}}
 
   .board{display:flex;flex-direction:column;gap:11px;margin-top:8px}
-  .card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;position:relative}
+  .card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;position:relative;
+    animation:cardIn .45s cubic-bezier(.2,.7,.3,1) both;transition:transform .15s ease,box-shadow .15s ease}
+  .card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(0,0,0,.45)}
+  .card:active{transform:translateY(0)}
+  @keyframes cardIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  button.run:active,a.livebtn:active,.tab:active,.sharebtn:active{transform:translateY(1px)}
+  @media (prefers-reduced-motion:reduce){
+    .card{animation:none}.skel{animation:none}
+    .card,.card:hover{transition:none;transform:none}
+  }
   .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--grass-dim);z-index:1}
   .card.top3::before{background:var(--amber)}
+  .card.first{border-color:#e4002b;box-shadow:0 0 0 1px rgba(228,0,43,.5),0 10px 26px rgba(228,0,43,.16)}
+  .skel{height:96px;border-radius:var(--radius);border:1px solid var(--line);margin-bottom:12px;
+    background:linear-gradient(90deg,var(--panel) 25%,#1b3a6e 37%,var(--panel) 63%);background-size:400% 100%;
+    animation:shimmer 1.3s linear infinite}
+  @keyframes shimmer{0%{background-position:100% 0}100%{background-position:0 0}}
 
   .head{display:grid;grid-template-columns:50px 1fr auto;gap:14px;align-items:center;padding:14px 18px;cursor:pointer}
   .rank{font-family:"Archivo",sans-serif;font-weight:900;font-size:38px;line-height:1;color:var(--line);font-stretch:75%}
@@ -405,7 +424,8 @@ function clearStatus(){els("status").style.display="none";}
 els("run").addEventListener("click",run);
 async function run(){
   const btn=els("run");btn.disabled=true;btn.textContent="Working…";
-  els("board").innerHTML="";els("slate").style.display="none";
+  els("board").innerHTML='<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+  els("slate").style.display="none";
   const date=els("date").value, season=date.slice(0,4);
   try{
     setStatus("Pulling the schedule…",false,true);
@@ -508,6 +528,7 @@ async function run(){
     loadRecord();
   }catch(e){
     console.error(e);
+    els("board").innerHTML="";
     setStatus("Couldn't reach the data feeds — a source may be down or your connection blocked the request. Wait a minute and tap <b>Generate Hit List</b> again.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
   }
   finish(btn);
@@ -1092,7 +1113,7 @@ function render(top,lg,mode){mode=mode||"hit";
     const matchup=`${tImg}${c.teamAbbr} ${c.isHome?"vs":"@"} ${oImg}${c.oppAbbr} · <span class="vs">SP ${c.oppPitcherName||"TBD"}</span>${pmeta?` <span class="hand">(${pmeta})</span>`:""}`;
     const avatar=`<span class="avatar"><span class="pic"><img class="headshot" src="${HEAD(c.id)}" alt="" onerror="${HIDE}"></span><img class="teambadge" src="${TLOGO(tId)}" alt="" onerror="${HIDE}"></span>`;
 
-    const card=document.createElement("div");card.className="card"+(i<3?" top3":"");
+    const card=document.createElement("div");card.className="card"+(i<3?" top3":"")+(i===0?" first":"");card.style.animationDelay=(i*55)+"ms";
     card.innerHTML=`
       <div class="head" role="button" tabindex="0" aria-expanded="false">
         <div class="rank">${i+1}</div>
