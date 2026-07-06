@@ -298,7 +298,7 @@
   <div id="status" class="status">Pick a date and generate the hit list. Lineups firm up ~1–3 hours before first pitch — earlier than that you get projected pools, flagged on each card. Weather only loads for today and the next ~16 days.</div>
   <div id="modeTabs" style="display:none">
     <button id="tabHit" class="tab active">Hit List</button>
-    <button id="tabHR" class="tab">Long Ball</button>
+    <button id="tabHR" class="tab">Homerun List</button>
   </div>
   <div id="hrpanel" style="display:none"></div>
   <div id="taphint" class="taphint" style="display:none">Tap a player to expand — why he's ranked, what's moving his score, and the full stat line.</div>
@@ -358,7 +358,7 @@ const parkFactor=id=>PARK[id]??1.00;
 const parkHR=id=>PARKHR[id]??1.00;
 let LGRATE={avg:0.243,hit:0.220,hr:0.031,base:0.66,con:0.72,hpc:0.31};
 let BULLPEN=new Map();
-let LASTTOP=null,LASTDATE=null,MODE="hit",POOLALL=null,LASTLG=null;
+let LASTTOP=null,LASTDATE=null,MODE="hit",POOLALL=null,LASTLG=null,RECDATA=null;
 const PA_BY_SLOT={1:4.7,2:4.6,3:4.5,4:4.4,5:4.3,6:4.1,7:4.0,8:3.9,9:3.8};
 
 async function pool(items,fn,conc=5){
@@ -535,6 +535,26 @@ els("tabHit").addEventListener("click",()=>switchMode("hit"));
 els("tabHR").addEventListener("click",()=>switchMode("hr"));
 
 function renderHRPanel(){
+  const HRLBL=[{lo:0,hi:.06,lbl:"under 6%",tgt:4.5},{lo:.06,hi:.09,lbl:"6–9%",tgt:7.5},
+               {lo:.09,hi:.12,lbl:"9–12%",tgt:10.5},{lo:.12,hi:1.01,lbl:"12%+",tgt:13.5}];
+  // ---- live tracking record (the headline) ----
+  const hr=RECDATA&&RECDATA.summary?RECDATA.summary.hr:null;
+  let liveHtml;
+  if(!RECDATA){liveHtml=`<div style="margin-top:10px;color:var(--muted)">Loading the record…</div>`;}
+  else if(!hr||!hr.picks){
+    liveHtml=`<div style="margin-top:10px"><b style="color:var(--chalk)">Homerun List record</b><div style="margin-top:4px">Tracking is live — every generated list logs its top 10 homer picks and grades them once the games go final. First graded night shows here tomorrow.</div></div>`;
+  }else{
+    const rows=hr.bands.filter(b=>b.n>0).map(b=>{
+      const meta=HRLBL.find(m=>Math.abs(m.lo-b.lo)<0.001)||{lbl:Math.round(b.lo*100)+"%+",tgt:(b.lo*100)+1.5};
+      const act=100*b.hr/b.n;
+      return `<div class="bandrow"><span class="lbl">said ${meta.lbl}</span><span class="bar"><i style="width:${Math.min(100,act*5)}%"></i><b style="left:${Math.min(100,meta.tgt*5)}%"></b></span><span class="val">homered ${act.toFixed(1)}% (${b.hr}/${b.n})</span></div>`;
+    }).join("");
+    liveHtml=`<div style="margin-top:10px"><b style="color:var(--chalk)">Homerun List record — live</b>
+      <div style="margin-top:4px;font-family:'Anton',sans-serif;font-size:26px;color:var(--grass)">${hr.homers}/${hr.picks} · ${(100*hr.rate).toFixed(1)}%</div>
+      <div style="font-size:12px">picks that homered, graded nightly against the box scores</div>${rows}
+      <div style="margin-top:4px;font-size:12px">White tick = what the score promised. Bars use a 0–20% scale.</div></div>`;
+  }
+  // ---- backtest footnote (self-obsoletes as live data grows) ----
   const bt=readBacktest();
   let btHtml;
   if(bt){
@@ -542,15 +562,13 @@ function renderHRPanel(){
       const act=(100*b.hr/b.n).toFixed(1);
       return `<div class="bandrow"><span class="lbl">said ${b.lbl}</span><span class="bar"><i style="width:${Math.min(100,act*5)}%"></i><b style="left:${Math.min(100,b.tgt*5)}%"></b></span><span class="val">homered ${act}% (${b.hr}/${b.n})</span></div>`;
     }).join("");
-    btHtml=`<div style="margin-top:10px"><b style="color:var(--chalk)">Backtest — last ${bt.days} days (${bt.picks} picks)</b>${rows}
-      <div style="margin-top:6px">Top pick homered ${bt.top1.hr}/${bt.top1.n} nights (${(100*bt.top1.hr/Math.max(bt.top1.n,1)).toFixed(0)}%).</div>
-      <div style="margin-top:4px;font-size:12px">Backtest, not a live record: it reconstructs stats as of each morning but knows who actually played, so real picks will run a touch worse. Bars use a 0–20% scale.</div></div>`;
+    btHtml=`<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font-size:12px"><b style="color:var(--muted)">Backtest footnote</b> — last ${bt.days} days, ${bt.picks} reconstructed picks; top pick homered ${bt.top1.hr}/${bt.top1.n} nights. Not a live record: it knew who actually played, so it runs a touch optimistic.${rows}</div>`;
   }else{
     btHtml=`<div class="bt"><button id="btRun">Run 28-day backtest</button>
       <span id="btProg" style="margin-left:10px;font-family:'IBM Plex Mono',monospace;font-size:12px"></span>
       <div style="margin-top:6px;font-size:12px">One-time, ~2–3 minutes: replays the last four weeks with stats reconstructed as of each morning and grades who actually homered. Keep the page open while it runs.</div></div>`;
   }
-  els("hrpanel").innerHTML=`<b style="color:var(--chalk)">Long Ball — v1.</b> Same pool, re-ranked by home-run chance (batter power, pitcher HR tendency, park). Even a great top pick lands ~15%: most nights the best dinger pick does nothing — that's home runs, not a broken model. Card breakdowns below still describe the <i>hit</i> score in v1.${btHtml}`;
+  els("hrpanel").innerHTML=`<b style="color:var(--chalk)">Homerun List — v1.</b> Same pool, re-ranked by home-run chance (batter power, pitcher HR tendency, park). Even a great top pick lands ~15%: most nights the best dinger pick does nothing — that's home runs, not a broken model. Card breakdowns below still describe the <i>hit</i> score in v1.${liveHtml}${btHtml}`;
   const rb=els("btRun");if(rb)rb.addEventListener("click",runBacktest);
 }
 function readBacktest(){try{return JSON.parse(localStorage.getItem("hitlist.hrbt")||"null");}catch(e){return null;}}
@@ -731,6 +749,7 @@ async function loadRecord(){
     await fetch("/.netlify/functions/track?action=grade").catch(()=>{});
     const r=await fetch("/.netlify/functions/track?action=record");if(r.ok)j=await r.json();
   }catch(e){}
+  RECDATA=j;if(MODE==="hr")renderHRPanel();
   if(!j||!j.summary){el.innerHTML="";return;}
   const s=j.summary;
   if(!s.gradedDays){
