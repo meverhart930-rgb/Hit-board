@@ -200,11 +200,14 @@
   .recwrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
   .recbig{font-family:"Anton",sans-serif;font-size:clamp(30px,8vw,44px);line-height:1;color:var(--grass)}
   .recbig small{font-family:"Inter",sans-serif;font-size:13px;color:var(--muted);display:block;margin-top:4px;font-weight:400}
-  .bandrow{display:flex;align-items:center;gap:10px;margin-top:8px;font-family:"IBM Plex Mono",monospace;font-size:12px}
-  .bandrow .lbl{width:74px;color:var(--muted);flex:0 0 auto}
-  .bandrow .bar{flex:1;height:10px;background:#0c2551;border-radius:5px;overflow:hidden}
-  .bandrow .bar i{display:block;height:100%;background:var(--grass)}
-  .bandrow .val{width:86px;text-align:right;color:var(--chalk);flex:0 0 auto}
+  .bandrow{display:flex;align-items:center;gap:10px;margin-top:10px;font-family:"IBM Plex Mono",monospace;font-size:12px}
+  .bandrow .lbl{width:96px;color:var(--muted);flex:0 0 auto}
+  .bandrow .bar{flex:1;height:10px;background:#0c2551;border-radius:5px;overflow:visible;position:relative}
+  .bandrow .bar i{display:block;height:100%;background:var(--grass);border-radius:5px}
+  .bandrow .bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;opacity:.85;border-radius:1px}
+  .bandrow .val{width:110px;text-align:right;color:var(--chalk);flex:0 0 auto}
+  .bandverdict{text-align:right;font-family:"IBM Plex Mono",monospace;font-size:11px;margin-top:3px}
+  .verdict.ok{color:var(--grass)}.verdict.hot{color:var(--clay)}.verdict.cold{color:#c0d2ee}
   .dayrow{margin-top:10px;font-size:12.5px;color:var(--muted)}
   .dayrow b{color:var(--chalk);font-weight:600}
   .pickchip{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:11px;border:1px solid var(--line);border-radius:4px;padding:2px 7px;margin:3px 4px 0 0;color:var(--muted)}
@@ -606,11 +609,16 @@ async function loadRecord(){
     return;
   }
   const pct=v=>v==null?"—":(v*100).toFixed(1)+"%";
-  const bandLbl=b=>b.lo===0?"<60%":(b.hi>1?"75%+":Math.round(b.lo*100)+"–"+Math.round(b.hi*100)+"%");
+  const bandLbl=b=>b.lo===0?"under 60%":(b.hi>1?"75%+":Math.round(b.lo*100)+"–"+Math.round(b.hi*100)+"%");
+  const bandTarget=b=>b.lo===0?57.5:(b.hi>1?77.5:(b.lo+b.hi)*50);
   const bands=s.bands.filter(b=>b.n>0).map(b=>{
-    const r=b.hits/b.n;
-    return `<div class="bandrow"><span class="lbl">${bandLbl(b)}</span><span class="bar"><i style="width:${Math.round(r*100)}%"></i></span><span class="val">${b.hits}/${b.n} · ${Math.round(r*100)}%</span></div>`;
+    const act=Math.round(100*b.hits/b.n),tgt=bandTarget(b);
+    const verdict=Math.abs(act-tgt)<=4.5?`<span class="verdict ok">✓ on target</span>`
+      :(act<tgt?`<span class="verdict hot">▼ too confident</span>`:`<span class="verdict cold">▲ too modest</span>`);
+    return `<div class="bandrow"><span class="lbl">said ${bandLbl(b)}</span><span class="bar"><i style="width:${act}%"></i><b style="left:${tgt}%"></b></span><span class="val">hit ${act}% (${b.hits}/${b.n})</span></div>
+      <div class="bandverdict">${verdict}</div>`;
   }).join("");
+  const calHead=bands?`<div class="secsub" style="margin:14px 0 6px"><b style="color:var(--chalk)">Is the score honest?</b> Each row compares what the model <i>said</i> to what <i>actually happened</i>. The white tick is the promise — a bar reaching it means the score means what it says.</div>`:"";
   const days=(j.days||[]).filter(d=>d.graded).slice(0,7).map(d=>{
     const hs=d.picks.filter(p=>p.outcome==="hit").length,ms=d.picks.filter(p=>p.outcome==="miss").length;
     const chips=d.picks.map(p=>{
@@ -624,7 +632,7 @@ async function loadRecord(){
   el.innerHTML=`<h2 class="sechead">Track <span class="acc">Record</span></h2>
     <div class="recwrap">
       <div class="recbig">${s.hits}/${s.picks} · ${pct(s.rate)}<small>picks that got a hit, across ${s.gradedDays} graded day${s.gradedDays===1?"":"s"}${s.dnp?` · ${s.dnp} DNP excluded`:""}</small></div>
-      <div style="margin-top:14px">${bands||""}</div>
+      <div style="margin-top:6px">${calHead}${bands||""}</div>
       ${days}${small}
     </div>`;
 }
