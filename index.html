@@ -65,8 +65,10 @@
   input[type=date],input[type=text]{background:var(--bg2);border:1px solid var(--line);color:var(--chalk);font-family:"IBM Plex Mono",monospace;font-size:14px;padding:9px 11px;border-radius:var(--radius)}
   input[type=text]{min-width:240px}
   button.run{background:var(--redsolid);color:#fff;border:none;cursor:pointer;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em;padding:11px 22px;border-radius:var(--radius);font-stretch:90%}
-  a.livebtn{display:inline-flex;align-items:center;background:rgba(91,155,255,.12);color:var(--grass);border:1.5px solid var(--grass);text-decoration:none;cursor:pointer;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em;padding:10px 20px;border-radius:var(--radius);font-stretch:90%}
+  a.livebtn{display:inline-flex;align-items:center;justify-content:center;background:rgba(91,155,255,.12);color:var(--grass);border:1.5px solid var(--grass);text-decoration:none;cursor:pointer;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em;padding:10px 20px;border-radius:var(--radius);font-stretch:90%}
   a.livebtn:hover{background:rgba(91,155,255,.22)}
+  .btncol{display:inline-flex;flex-direction:column;gap:10px;vertical-align:top}
+  .btncol .livebtn{align-self:stretch}
   button.run:hover{filter:brightness(1.06)}
   button.run:disabled{opacity:.5;cursor:wait}
   button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);cursor:pointer;font-family:"IBM Plex Mono",monospace;font-size:12px;padding:9px 12px;border-radius:var(--radius)}
@@ -247,8 +249,10 @@
         <label for="date">Slate date</label>
         <input type="date" id="date" />
       </div>
-      <button class="run" id="run">Generate Hit List</button>
-      <a class="livebtn" id="liveLink" href="live.html">Live box scores →</a>
+      <div class="btncol">
+        <button class="run" id="run">Generate Hit List</button>
+        <a class="livebtn" id="liveLink" href="live.html">Live box scores →</a>
+      </div>
     </div>
 
     <div class="drawer" id="drawer" style="display:none" aria-hidden="true">
