@@ -281,7 +281,7 @@
         <input type="date" id="date" />
       </div>
       <div class="btncol">
-        <button class="run" id="run">Generate Hit List</button>
+        <button class="run" id="run">Generate Lists</button>
         <a class="livebtn" id="liveLink" href="live.html">Live box scores →</a>
       </div>
     </div>
@@ -314,7 +314,7 @@
     <div class="lnote" id="lineupNote" style="display:none"></div>
   </header>
 
-  <div id="status" class="status">Pick a date and generate the hit list. Lineups firm up ~1–3 hours before first pitch — earlier than that you get projected pools, flagged on each card. Weather only loads for today and the next ~16 days.</div>
+  <div id="status" class="status">Pick a date and generate the lists. Lineups firm up ~1–3 hours before first pitch — earlier than that you get projected pools, flagged on each card. Weather only loads for today and the next ~16 days.</div>
   <div id="modeTabs" style="display:none">
     <button id="tabHit" class="tab active">Hit List</button>
     <button id="tabHR" class="tab">Homerun List</button>
@@ -412,7 +412,7 @@ els("howBtn").addEventListener("click",()=>{const p=els("howPanel");const o=p.cl
       render(saved.top,saved.slate.lg);
       renderStreaks(saved.hot||[]);
       const t=new Date(saved.builtAt);
-      setStatus(`Restored the list you built at ${t.getHours()}:${String(t.getMinutes()).padStart(2,"0")}. Lineups may have moved since — tap <b>Generate Hit List</b> for a fresh run.`);
+      setStatus(`Restored the list you built at ${t.getHours()}:${String(t.getMinutes()).padStart(2,"0")}. Lineups may have moved since — tap <b>Generate Lists</b> for a fresh run.`);
     }
   }catch(e){}
   },0);
@@ -529,11 +529,11 @@ async function run(){
   }catch(e){
     console.error(e);
     els("board").innerHTML="";
-    setStatus("Couldn't reach the data feeds — a source may be down or your connection blocked the request. Wait a minute and tap <b>Generate Hit List</b> again.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
+    setStatus("Couldn't reach the data feeds — a source may be down or your connection blocked the request. Wait a minute and tap <b>Generate Lists</b> again.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
   }
   finish(btn);
 }
-function finish(btn){btn.disabled=false;btn.textContent="Generate Hit List";}
+function finish(btn){btn.disabled=false;btn.textContent="Generate Lists";}
 
 // ---------- Hit List / Long Ball tabs ----------
 function setTab(){
@@ -816,6 +816,9 @@ function persistBoard(top,date,games){
     const tracked=top.map(c=>({id:c.id,name:c.name,teamAbbr:c.teamAbbr,oppAbbr:c.oppAbbr,teamId:c.teamId,
       gamePk:c.gamePk,isHome:c.isHome,hitScore:c.pFinal,confirmed:c.confirmed,slot:c.slot}));
     localStorage.setItem("hitboard.tracked",JSON.stringify(tracked));
+    const hrTop=(POOLALL||[]).slice().sort((a,b)=>(b.hrProb||0)-(a.hrProb||0)).slice(0,10);
+    localStorage.setItem("hitboard.hrtracked",JSON.stringify(hrTop.map(c=>({id:c.id,name:c.name,teamAbbr:c.teamAbbr,oppAbbr:c.oppAbbr,teamId:c.teamId,
+      gamePk:c.gamePk,isHome:c.isHome,hrScore:c.hrProb,confirmed:c.confirmed,slot:c.slot}))));
     localStorage.setItem("hitboard.date",date);
     localStorage.setItem("hitboard.builtAt",new Date().toISOString());
     localStorage.setItem("hitboard.proxy",JSON.stringify({use:els("useProxy").checked,prefix:els("proxyUrl").value.trim()}));

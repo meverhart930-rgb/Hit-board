@@ -17,7 +17,12 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0}
-  body{background:radial-gradient(1200px 600px at 50% -200px,#14315f 0%,var(--bg) 60%) fixed,var(--bg);color:var(--chalk);font-family:"Inter",system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
+  body{background:
+ radial-gradient(120% 90% at 50% 8%, rgba(0,0,0,0) 58%, rgba(0,0,0,.32) 100%),
+ url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E"),
+ repeating-linear-gradient(90deg, rgba(255,255,255,.016) 0 1px, rgba(255,255,255,0) 1px 54px),
+ radial-gradient(1200px 600px at 50% -200px,#14315f 0%,var(--bg) 60%),var(--bg);
+ color:var(--chalk);font-family:"Inter",system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
   .wrap{max-width:1080px;margin:0 auto;padding:28px 18px 80px}
 
   header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:20px}
@@ -30,6 +35,10 @@
   a.back{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--amber);text-decoration:none;border:1px solid var(--clay-dim);padding:9px 12px;border-radius:var(--radius)}
   a.back:hover{filter:brightness(1.1)}
   button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);cursor:pointer;font-family:"IBM Plex Mono",monospace;font-size:12px;padding:9px 12px;border-radius:var(--radius)}
+  #liveTabs{display:flex;gap:8px;margin:14px 0 4px}
+  .ltab{flex:1;background:transparent;border:1.5px solid var(--line);color:var(--muted);cursor:pointer;font-family:"Archivo",sans-serif;font-weight:800;font-size:14px;letter-spacing:.02em;padding:10px 0;border-radius:var(--radius)}
+  .ltab.active{background:var(--redsolid);border-color:var(--redsolid);color:#fff}
+  .ltab:disabled{opacity:.4;cursor:not-allowed}
   button.ghost:hover{color:var(--chalk);border-color:var(--muted)}
   button.ghost.on{color:var(--grass);border-color:var(--grass-dim)}
   .meta{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted2);margin-left:auto}
@@ -89,20 +98,16 @@
   <header>
     <div class="eyebrow">Live per-player box scores</div>
     <h1>Live <span class="acc">Box</span></h1>
-    <p class="sub">Each card tracks one batter from your board — just that player's line, updating while their game is live. Green rail means they've recorded a hit. Build the board first so there's something to follow.</p>
+    <p class="sub">Live box score for each tracked batter, updating while their game is on. Switch between your Hit picks and Homerun picks below. Generate a list first so there's something to follow.</p>
     <div class="bar">
-      <a class="back" href="index.html">← Hit List</a>
+      <a class="back" href="index.html">← Lists</a>
       <button class="ghost" id="refresh">Refresh now</button>
       <button class="ghost on" id="auto">Auto-refresh: on</button>
-      <button class="ghost" id="toggleProxy">Proxy</button>
       <span class="meta" id="meta"></span>
     </div>
-    <div class="proxyrow" id="proxyrow">
-      <label><input type="checkbox" id="useProxy"> Route through CORS proxy</label>
-      <input type="text" id="proxyUrl" placeholder="https://your-proxy/?url=" />
-      <button class="ghost" id="saveProxy">Save</button>
-    </div>
   </header>
+
+  <div id="liveTabs"><button id="lvHit" class="ltab active">Hit picks</button><button id="lvHR" class="ltab">Homerun picks</button></div>
 
   <div id="status" class="status">Loading your tracked players…</div>
   <div class="grid" id="grid"></div>
@@ -118,7 +123,6 @@ const els=id=>document.getElementById(id);
 /* ---- proxy (shared with board via localStorage) ---- */
 let PROXY={use:false,prefix:""};
 try{const p=JSON.parse(localStorage.getItem("hitboard.proxy")||"{}");if(p&&typeof p==="object"){PROXY.use=!!p.use;PROXY.prefix=p.prefix||"";}}catch(e){}
-els("useProxy").checked=PROXY.use; els("proxyUrl").value=PROXY.prefix;
 const FN="/.netlify/functions/mlb";
 async function api(path){
   try{const r=await fetch(FN+"?path="+encodeURIComponent(path));if(r.ok)return await r.json();}catch(e){}
@@ -127,16 +131,13 @@ async function api(path){
   if(!r.ok)throw new Error("HTTP "+r.status);
   return r.json();
 }
-els("toggleProxy").addEventListener("click",()=>els("proxyrow").classList.toggle("open"));
-els("saveProxy").addEventListener("click",()=>{
-  PROXY.use=els("useProxy").checked;PROXY.prefix=els("proxyUrl").value.trim();
-  localStorage.setItem("hitboard.proxy",JSON.stringify(PROXY));
-  els("proxyrow").classList.remove("open");refresh();
-});
 
 /* ---- load tracked board ---- */
 let TRACKED=[],DATE="";
-try{TRACKED=JSON.parse(localStorage.getItem("hitboard.tracked")||"[]");}catch(e){TRACKED=[];}
+let TRACKED_HIT=[],TRACKED_HR=[],LVMODE="hit";
+try{TRACKED_HIT=JSON.parse(localStorage.getItem("hitboard.tracked")||"[]");}catch(e){TRACKED_HIT=[];}
+try{TRACKED_HR=JSON.parse(localStorage.getItem("hitboard.hrtracked")||"[]");}catch(e){TRACKED_HR=[];}
+TRACKED=TRACKED_HIT;
 DATE=localStorage.getItem("hitboard.date")||new Date().toISOString().slice(0,10);
 
 let timer=null, AUTO=true;
@@ -201,7 +202,7 @@ async function refresh(){
     else if(AUTO && !anyLive && finalN<TRACKED.length){ timer=setTimeout(refresh,120000); } // pregame: slow poll
   }catch(e){
     console.error(e);
-    setStatus("Couldn't reach the MLB Stats API. If the board page needed a CORS proxy, click <b>Proxy</b> above, enter the same prefix, and save.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
+    setStatus("Couldn't reach the live feed — a source may be down or your connection blocked it. Try <b>Refresh now</b> in a moment.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
   }
 }
 
@@ -231,6 +232,7 @@ function gamePill(g){
 
 function render(boxes){
   const grid=els("grid");grid.innerHTML="";
+  if(!TRACKED.length){grid.innerHTML='<div class="sub" style="padding:10px 2px">'+(LVMODE==="hr"?"No Homerun picks yet — generate a list on the main page, then come back.":"No Hit picks yet — generate a list on the main page first.")+'</div>';return;}
   TRACKED.forEach((p,i)=>{
     const g=p._game;
     const st=g?.status?.abstractGameState;
@@ -243,17 +245,24 @@ function render(boxes){
     const inLineup = info!=null && (info.order || ab>0 || h>0 || bb>0 || k>0);
 
     // result classification
+    const hrN=+b.homeRuns||0;
     let rcls="idle", rbig="—", rlab="awaiting first pitch", cardCls="";
     if(g && /postpon|suspend|cancel/i.test(g.status?.detailedState||"")){ rcls="idle"; rbig="—"; rlab=g.status.detailedState; }
     else if(started && info && !inLineup){ rcls="idle"; rbig="DNP"; rlab="did not start"; }
     else if(started && !info){ rcls="idle"; rbig="DNP"; rlab="not in box score"; }
     else if(started){
-      if(h>=1){ rcls="hit"; rbig="✓ HIT"; rlab=h+(h>1?" hits":" hit")+" · "+h+"-for-"+ab; cardCls="hit"; }
-      else if(ab>0){ rcls="hitless"; rbig="0-for-"+ab; rlab="no hit yet"; cardCls="hitless"; }
-      else { rcls="idle"; rbig="—"; rlab=bb?"walked, no AB":"no at-bats yet"; }
+      if(LVMODE==="hr"){
+        if(hrN>=1){ rcls="hit"; rbig="💣 "+(hrN>1?hrN+" HR":"HOMER"); rlab=hrN+(hrN>1?" homers":" home run")+" · "+h+"-for-"+ab; cardCls="hit"; }
+        else if(ab>0){ rcls="hitless"; rbig="0 HR"; rlab=h>=1?("has "+h+" hit"+(h>1?"s":"")+", no bomb"):"no homer yet"; cardCls="hitless"; }
+        else { rcls="idle"; rbig="—"; rlab=bb?"walked, no AB":"no at-bats yet"; }
+      } else {
+        if(h>=1){ rcls="hit"; rbig="✓ HIT"; rlab=h+(h>1?" hits":" hit")+" · "+h+"-for-"+ab; cardCls="hit"; }
+        else if(ab>0){ rcls="hitless"; rbig="0-for-"+ab; rlab="no hit yet"; cardCls="hitless"; }
+        else { rcls="idle"; rbig="—"; rlab=bb?"walked, no AB":"no at-bats yet"; }
+      }
     }
     if(st==="Live") cardCls=cardCls||"livenow";
-    if(st==="Live" && h>=1) cardCls="hit";
+    if(st==="Live" && ((LVMODE==="hr"&&hrN>=1)||(LVMODE!=="hr"&&h>=1))) cardCls="hit";
 
     // current at-bat / on base note
     let atbat="";
@@ -286,12 +295,26 @@ function render(boxes){
       </div>
       <div class="xtra">${xbh.length?("XBH: <b>"+xbh.join(", ")+"</b>"):(scoreLine||"&nbsp;")}</div>
       ${scoreLine&&xbh.length?`<div class="score-badge">${scoreLine}</div>`:""}
-      <div class="score-badge">Hit score ${(p.hitScore*100).toFixed(1)}% · ${p.confirmed?("confirmed"+(p.slot?(" · bats "+p.slot):"")):"projected"}</div>
+      <div class="score-badge">${LVMODE==="hr"?("HR chance "+((p.hrScore||0)*100).toFixed(1)+"%"):("Hit score "+(p.hitScore*100).toFixed(1)+"%")} · ${p.confirmed?("confirmed"+(p.slot?(" · bats "+p.slot):"")):"projected"}</div>
     `;
     grid.appendChild(card);
   });
 }
 
+const _lvHit=els("lvHit"),_lvHR=els("lvHR");
+if(_lvHit)_lvHit.addEventListener("click",()=>setLvMode("hit"));
+if(_lvHR)_lvHR.addEventListener("click",()=>setLvMode("hr"));
+function setLvMode(m){
+  if(LVMODE===m)return;LVMODE=m;
+  TRACKED=(m==="hr"?TRACKED_HR:TRACKED_HIT);
+  els("lvHit").classList.toggle("active",m==="hit");
+  els("lvHR").classList.toggle("active",m==="hr");
+  document.querySelector(".sub").textContent=(m==="hr")
+    ?"Live box score for each Homerun pick. The bomb lights up the moment a tracked batter goes deep."
+    :"Live box score for each Hit pick. Green means they\'ve recorded a hit.";
+  refresh();
+}
+if(!TRACKED_HR.length&&_lvHR)_lvHR.disabled=true;
 refresh();
 </script>
 </body>
