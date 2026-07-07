@@ -589,7 +589,7 @@ function renderHRPanel(){
       <span id="btProg" style="margin-left:10px;font-family:'IBM Plex Mono',monospace;font-size:12px"></span>
       <div style="margin-top:6px;font-size:12px">One-time, ~2–3 minutes: replays the last four weeks with stats reconstructed as of each morning and grades who actually homered. Keep the page open while it runs.</div></div>`;
   }
-  els("hrpanel").innerHTML=`<b style="color:var(--chalk)">Homerun List — v1.</b> Same pool, re-ranked by home-run chance (batter power, pitcher HR tendency, park). Even a great top pick lands ~15%: most nights the best dinger pick does nothing — that's home runs, not a broken model. Card breakdowns below still describe the <i>hit</i> score in v1.${liveHtml}${btHtml}`;
+  els("hrpanel").innerHTML=`<b style="color:var(--chalk)">Homerun List — v1.</b> Same pool, re-ranked by home-run chance (batter power, pitcher HR tendency, park). Even a great top pick lands ~15%: most nights the best dinger pick does nothing — that's home runs, not a broken model.${liveHtml}${btHtml}`;
   const rb=els("btRun");if(rb)rb.addEventListener("click",runBacktest);
 }
 function readBacktest(){try{return JSON.parse(localStorage.getItem("hitlist.hrbt")||"null");}catch(e){return null;}}
@@ -936,10 +936,18 @@ function envFactor(c){
 function computeHR(c,pa){
   const lg=LGRATE.hr;
   let hp=(c.hr!=null&&c.pa>0)?((c.hr+120*lg)/(c.pa+120)):lg; // shrink toward league
-  if(c.oppPitcher&&c.oppPitcher.bf>=80&&c.oppPitcher.hr!=null){const pr=c.oppPitcher.hr/c.oppPitcher.bf;const rel=clamp(pr/Math.max(lg,0.001),0.6,1.7);hp*=rel;}
-  hp*=parkHR(c.venueId);
+  const hp0=hp;
+  let pitRel=null;
+  if(c.oppPitcher&&c.oppPitcher.bf>=80&&c.oppPitcher.hr!=null){const pr=c.oppPitcher.hr/c.oppPitcher.bf;pitRel=clamp(pr/Math.max(lg,0.001),0.6,1.7);hp*=pitRel;}
+  const hp1=hp;
+  const pk=parkHR(c.venueId);
+  hp*=pk;
   hp=clamp(hp,0.004,0.13);
   c.hrProb=1-Math.pow(1-hp,pa);
+  // stage probabilities so the card can explain exactly what the math did
+  const P=x=>1-Math.pow(1-clamp(x,0.004,0.13),pa);
+  const b=P(hp0),wp=P(hp1);
+  c.hrBits={rate:hp0,pitRel,park:pk,base:b,pit:wp-b,env:c.hrProb-wp};
 }
 function scoreBase(c,lg){
   let p=perPA(c);const pa=expPA(c);const r0=probFrom(p,pa);
@@ -1054,14 +1062,14 @@ function render(top,lg,mode){mode=mode||"hit";
     // ---- breakdown bar (kept, but tucked into "show all") ----
     const segs=[{v:cn.skill,col:"var(--grass-dim)"},{v:cn.xba,col:"var(--xba)"},{v:cn.pit,col:"var(--clay)"},{v:cn.plat,col:"var(--plat)"},{v:cn.env,col:"var(--env)"},{v:cn.form,col:"var(--form)"},{v:cn.bvp,col:"var(--bvp)"}];
     const total=segs.reduce((a,s)=>a+Math.abs(s.v),0)||1;
-    const track=segs.map(s=>{const w=Math.abs(s.v)/total*100;if(w<0.4)return"";const col=s.v<0?"var(--clay-dim)":s.col;return `<i style="width:${w}%;background:${col}"></i>`;}).join("");
+    let track=segs.map(s=>{const w=Math.abs(s.v)/total*100;if(w<0.4)return"";const col=s.v<0?"var(--clay-dim)":s.col;return `<i style="width:${w}%;background:${col}"></i>`;}).join("");
 
     // ---- collapsed chips: only what matters at a glance ----
     const chips=[];
     chips.push(c.confirmed?`<span class="chip green">Confirmed${c.slot?` · bats ${ordinal(c.slot)}`:""}</span>`:`<span class="chip warn">Projected lineup</span>`);
     if(c.streak!=null&&c.streak>=5)chips.push(`<span class="chip flame">🔥 ${c.streak}-game hit streak</span>`);
     if(c.wx&&!c.wx.roof&&c.wx.precip!=null&&c.wx.precip>=50)chips.push(`<span class="chip rain">⚠ Rain-out risk ${c.wx.precip}%</span>`);
-    if(c.xba!=null&&c.xba>0){const d=c.xba-c.avg;if(d>=0.012)chips.push(`<span class="chip xba">▲ due better results</span>`);else if(d<=-0.012)chips.push(`<span class="chip xba">▼ running hot</span>`);}
+    if(mode!=="hr"&&c.xba!=null&&c.xba>0){const d=c.xba-c.avg;if(d>=0.012)chips.push(`<span class="chip xba">▲ due better results</span>`);else if(d<=-0.012)chips.push(`<span class="chip xba">▼ running hot</span>`);}
     if(c.pa<120)chips.push(`<span class="chip warn">Small sample</span>`);
 
     // ---- "why he's here" plain sentence ----
@@ -1069,10 +1077,10 @@ function render(top,lg,mode){mode=mode||"hit";
       .filter(d=>d.t&&Math.abs(d.v)>0.002).sort((a,b)=>Math.abs(b.v)-Math.abs(a.v));
     const ord=n=>n==1?"leadoff":n+(["th","st","nd","rd"][((n%100)>10&&(n%100)<14)?0:(n%10<4?n%10:0)]);
     const lineupBit=c.confirmed?(c.slot?`batting ${ord(c.slot)}`:"in the lineup"):"projected to play";
-    const why=`<b>${c.name}</b> gets a hit in about <span class="k">${Math.round(c.avg*100)}%</span> of his at-bats and is ${lineupBit}, so he should bat around <span class="k">${expPA(c).toFixed(1)}</span> times.${drivers[0]?" The biggest factor beyond that: "+driverText(drivers[0].k,c,lg):""}`;
+    let why=`<b>${c.name}</b> gets a hit in about <span class="k">${Math.round(c.avg*100)}%</span> of his at-bats and is ${lineupBit}, so he should bat around <span class="k">${expPA(c).toFixed(1)}</span> times.${drivers[0]?" The biggest factor beyond that: "+driverText(drivers[0].k,c,lg):""}`;
 
     // ---- top 3 drivers, written out ----
-    const drvHtml=drivers.slice(0,3).map(d=>`<div class="drv"><span class="dot" style="background:${DCOLOR[d.k]}"></span><div><div class="drv-h"><b>${DLABEL[d.k]}</b> <span class="delta ${d.v>0?"pos":"neg"}">${signed(d.v)} pts</span></div><div class="drv-t">${d.t}</div></div></div>`).join("");
+    let drvHtml=drivers.slice(0,3).map(d=>`<div class="drv"><span class="dot" style="background:${DCOLOR[d.k]}"></span><div><div class="drv-h"><b>${DLABEL[d.k]}</b> <span class="delta ${d.v>0?"pos":"neg"}">${signed(d.v)} pts</span></div><div class="drv-t">${d.t}</div></div></div>`).join("");
 
     // ---- key numbers, labeled, relevant only ----
     const sp=relSplit(c);
@@ -1083,6 +1091,34 @@ function render(top,lg,mode){mode=mode||"hit";
     if(c.recentAVG!=null)kn.push(`<div class="kn"><span class="kl">Last ${c.recentGames} games<span class="kh">recent form</span></span><span class="kv">${c.recentAVG.toFixed(3)}</span></div>`);
     if(c.oppPitcher)kn.push(`<div class="kn"><span class="kl">Pitcher allows<span class="kh">what hitters bat off SP ${c.oppPitcherName||"the starter"} this season — lower means a tougher pitcher</span></span><span class="kv">${c.oppPitcher.oppAVG.toFixed(3)}</span></div>`);
     if(c.hrProb!=null)kn.push(`<div class="kn"><span class="kl">Home run chance<span class="kh">est. chance of a HR today (park + pitcher adjusted)</span></span><span class="kv">${(c.hrProb*100).toFixed(1)}%</span></div>`);
+
+    // ---- Homerun List mode: explain the HR math, not the hit math ----
+    if(mode==="hr"&&c.hrBits){
+      const hb=c.hrBits,nm=c.oppPitcherName||"the starter";
+      const rateTxt=(hb.rate*100).toFixed(1);
+      const parkPct=Math.round((hb.park-1)*100);
+      const whyBits=[];
+      if(hb.pitRel!=null&&hb.pitRel>=1.15)whyBits.push(`SP ${nm} serves up homers at ${hb.pitRel.toFixed(1)}× the league rate`);
+      else if(hb.pitRel!=null&&hb.pitRel<=0.85)whyBits.push(`SP ${nm} keeps the ball in the yard (${hb.pitRel.toFixed(1)}× league HR rate)`);
+      if(parkPct>=4)whyBits.push(`this park adds ~${parkPct}% to homers`);
+      else if(parkPct<=-4)whyBits.push(`this park cuts homers ~${-parkPct}%`);
+      why=`<b>${c.name}</b> homers in about <span class="k">${rateTxt}%</span> of his trips to the plate (<span class="k">${c.hr}</span> HR this season) and is ${lineupBit}, so he should bat around <span class="k">${expPA(c).toFixed(1)}</span> times.${whyBits.length?` Biggest factor beyond that: ${whyBits[0]}.`:""}`;
+      const hrDrv=[
+        (hb.pitRel!=null&&Math.abs(hb.pit)>0.001)?{lab:"Pitcher HR tendency",col:"var(--clay)",v:hb.pit,
+          t:`SP ${nm} allows homers at ${hb.pitRel.toFixed(2)}× the league rate this season${hb.pitRel>1?" — the matchup helps the power play":" — tough to take deep"}.`}:null,
+        (Math.abs(hb.env)>0.001)?{lab:"Park",col:"var(--env)",v:hb.env,
+          t:`This yard plays ${parkPct>=0?"+":""}${parkPct}% for home runs vs an average park.`}:null
+      ].filter(Boolean).sort((a,b)=>Math.abs(b.v)-Math.abs(a.v));
+      drvHtml=hrDrv.map(d=>`<div class="drv"><span class="dot" style="background:${d.col}"></span><div><div class="drv-h"><b>${d.lab}</b> <span class="delta ${d.v>0?"pos":"neg"}">${signed(d.v)} pts</span></div><div class="drv-t">${d.t}</div></div></div>`).join("")
+        ||`<div class="drv"><span class="dot" style="background:var(--grass-dim)"></span><div><div class="drv-t">Nothing beyond his own power is moving this one — neutral park, league-average pitcher.</div></div></div>`;
+      kn.length=0;
+      kn.push(`<div class="kn"><span class="kl">Homer rate<span class="kh">share of his trips to the plate that end in a homer — league is ~${(LGRATE.hr*100).toFixed(1)}%</span></span><span class="kv amber">${rateTxt}%</span></div>`);
+      kn.push(`<div class="kn"><span class="kl">Season power<span class="kh">home runs this year, and slugging for context (slugging isn't scored)</span></span><span class="kv">${c.hr} HR · ${(c.slg||0).toFixed(3)} SLG</span></div>`);
+      if(hb.pitRel!=null)kn.push(`<div class="kn"><span class="kl">SP HR tendency<span class="kh">homers SP ${nm} allows vs league — above 1.00× is gopher-prone</span></span><span class="kv">${hb.pitRel.toFixed(2)}×</span></div>`);
+      kn.push(`<div class="kn"><span class="kl">Park HR factor<span class="kh">how this ballpark treats home runs vs average</span></span><span class="kv">${hb.park.toFixed(2)}×</span></div>`);
+      kn.push(`<div class="kn"><span class="kl">HR chance today<span class="kh">chance of at least one homer, over ~${expPA(c).toFixed(1)} trips</span></span><span class="kv">${((c.hrProb||0)*100).toFixed(1)}%</span></div>`);
+      track="";
+    }
 
     // ---- full line (hidden behind "show all stats") ----
     const dnAvg=c.dn==="day"?c.dayAVG:c.nightAVG;
