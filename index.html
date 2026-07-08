@@ -69,9 +69,11 @@
   .controls{display:flex;flex-direction:column;gap:11px;align-items:stretch;margin:14px 0 0}
   .field{display:flex;flex-direction:column;gap:6px}
   .field label{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
-  input[type=date],input[type=text]{background:var(--bg2);border:1px solid var(--line);color:var(--chalk);font-family:"IBM Plex Mono",monospace;font-size:14px;padding:11px 13px;border-radius:var(--radius);width:100%}
+  input[type=date],input[type=text]{background:var(--bg2);border:1px solid var(--line);color:var(--chalk);font-family:"IBM Plex Mono",monospace;font-size:14px;padding:11px 13px;border-radius:var(--radius);width:100%;text-align:left}
   .controls .explainer{margin:0}
-  .controls>button.run,.controls>a.livebtn{width:100%;justify-content:center;text-align:center}
+  .controls>button.run{width:100%;justify-content:center;text-align:center}
+  .brandtext .livebtn{display:flex;width:clamp(160px,42vw,330px);margin:12px 0 0 2px}
+  button.run,a.livebtn{min-height:46px;white-space:nowrap;align-items:center;justify-content:center;text-align:center}
   input[type=text]{min-width:240px}
   button.run{background:var(--redsolid);color:#fff;border:none;cursor:pointer;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em;padding:11px 22px;border-radius:var(--radius);font-stretch:90%}
   a.livebtn{display:inline-flex;align-items:center;justify-content:center;background:rgba(91,155,255,.12);color:var(--grass);border:1.5px solid var(--grass);text-decoration:none;cursor:pointer;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em;padding:10px 20px;border-radius:var(--radius);font-stretch:90%}
@@ -277,13 +279,13 @@
         <input type="date" id="date" />
       </div>
       <button class="run" id="run">Generate Lists</button>
-      <a class="livebtn" id="liveLink" href="live.html">Live box scores →</a>
     </div>
       </div>
       <div class="brandtext">
         <span class="brand-kick">El Jefe's</span>
         <h1 class="wordmark"><img class="hitword" src="hit-word.png" alt="HIT" width="754" height="461"><br><span class="acc">List</span></h1>
         <img class="subsign" src="hr-sign.png" alt="and Homerun Predictor" width="700" height="456">
+        <a class="livebtn" id="liveLink" href="live.html">Live box scores →</a>
       </div>
     </div>
 
