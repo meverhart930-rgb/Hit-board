@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Honky Jefe's Hit List</title>
+<title>El Jefe's Hit List</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:ital,wght@0,400;0,600;0,800;0,900&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -37,12 +37,12 @@
   h1{font-family:"Archivo",sans-serif;font-weight:900;font-size:clamp(34px,7vw,60px);line-height:.92;letter-spacing:-.02em;margin:8px 0 6px;font-stretch:90%}
   h1 .acc{color:var(--amber)}
   .brand-kick{display:block;font-family:"Anton",sans-serif;font-size:clamp(20px,5.4vw,36px);letter-spacing:.24em;text-transform:uppercase;color:var(--chalk);opacity:.9;margin:0 0 0 2px}
-  .brandrow{display:flex;align-items:center;gap:16px;margin-top:4px;margin-bottom:14px}
-  .logoframe{position:relative;flex:0 0 auto;display:block}
+  .brandrow{display:flex;align-items:flex-start;gap:16px;margin-top:4px;margin-bottom:14px}
+  .logoframe{position:relative;flex:0 0 auto;display:flex;align-self:stretch;align-items:flex-start}
   .logoframe::before{content:"";position:absolute;left:3%;right:3%;top:15%;bottom:0;border-radius:16px;
     background:linear-gradient(168deg,#ff6b7d 0%,#e4002b 42%,#74001a 100%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 14px 34px rgba(0,0,0,.55),0 5px 18px rgba(228,0,43,.38)}
-  .brandlogo{height:clamp(204px,55vw,400px);width:auto;display:block;position:relative;z-index:1;
+  .brandlogo{height:clamp(210px,54vw,410px);width:auto;max-width:40vw;object-fit:contain;object-position:top center;display:block;position:relative;z-index:1;
     border-radius:0 0 14px 14px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.45))}
   .brandtext{min-width:0}
 
@@ -256,7 +256,7 @@
     <div class="brandrow">
       <span class="logoframe"><img class="brandlogo" src="honky-jefe-cut.png" alt="Honky Jefe mascot" width="586" height="800"></span>
       <div class="brandtext">
-        <span class="brand-kick">Honky Jefe's</span>
+        <span class="brand-kick">El Jefe's</span>
         <h1 class="wordmark"><img class="hitword" src="hit-word.png" alt="HIT" width="754" height="461"><br><span class="acc">List</span></h1>
         <img class="subsign" src="hr-sign.png" alt="and Homerun Predictor" width="700" height="456">
       </div>
@@ -320,7 +320,7 @@
     <button id="tabHR" class="tab">Homerun List</button>
   </div>
   <div id="hrpanel" style="display:none"></div>
-  <div id="taphint" class="taphint" style="display:none">Tap any player to see why he's ranked, what's moving his score, and his full stat line.</div>
+  <div id="taphint" class="taphint" style="display:none">Tap any player and the Jefe shows his work: why he's ranked, what's moving his score, and his full stat line.</div>
   <div id="sharewrap" style="display:none;text-align:center;margin:0 0 14px"><button id="shareBtn" class="sharebtn">Share this list</button></div>
   <div class="board" id="board"></div>
 
@@ -328,7 +328,7 @@
   <section id="record"></section>
 
   <footer>
-    <p class="caveat"><b>Read this before you trust a number.</b> The hit score is a calibrated estimate of the chance of at least one hit. We tighten it toward real hit rates so it doesn't run hot, but it's still an estimate, best used for ranking. Contact skill, adjusted for luck with Statcast xBA, drives most of it. Pitcher and platoon are the next real signals. Batter versus pitcher samples are close to meaningless, so we weight them near zero. Day and night is shown but not scored. Weather barely moves hit odds, and its real value is the rain-out flag. Home run chance is a rough estimate adjusted for park and pitcher. The thing that matters most is simply whether he starts, so check whether the card says Confirmed or Projected. Sportsbooks price these props well, so a high score usually means a known favorite, not free money. Data comes from the MLB Stats API, Baseball Savant, and Open-Meteo. This is not betting advice.</p>
+    <p class="caveat"><b>Read this before you trust a number.</b> The Jefe deals in odds, not promises. The hit score is a calibrated estimate of the chance of at least one hit. We tighten it toward real hit rates so it doesn't run hot, but it's still an estimate, best used for ranking. Contact skill, adjusted for luck with Statcast xBA, drives most of it. Pitcher and platoon are the next real signals. Batter versus pitcher samples are close to meaningless, so we weight them near zero. Day and night is shown but not scored. Weather barely moves hit odds, and its real value is the rain-out flag. Home run chance is a rough estimate adjusted for park and pitcher. The thing that matters most is simply whether he starts, so check whether the card says Confirmed or Projected. Sportsbooks price these props well, so a high score usually means a known favorite, not free money. Data comes from the MLB Stats API, Baseball Savant, and Open-Meteo. This is not betting advice.</p>
   </footer>
 </div>
 
@@ -589,7 +589,7 @@ function renderHRPanel(){
       <span id="btProg" style="margin-left:10px;font-family:'IBM Plex Mono',monospace;font-size:12px"></span>
       <div style="margin-top:6px;font-size:12px">One-time, ~2–3 minutes: replays the last four weeks with stats reconstructed as of each morning and grades who actually homered. Keep the page open while it runs.</div></div>`;
   }
-  els("hrpanel").innerHTML=`<b style="color:var(--chalk)">Homerun List, v1.</b> The same pool, re-ranked by home run chance from batter power, pitcher HR tendency, and park. Even a great top pick only lands around 15%. most nights the best dinger pick does nothing, and that's home runs for you, not a broken model.${liveHtml}${btHtml}`;
+  els("hrpanel").innerHTML=`<b style="color:var(--chalk)">Homerun List, v1.</b> The Jefe re-ranks the same pool by home run chance: batter power, pitcher HR tendency, and park. Even his top call only lands around 15%. most nights the best dinger pick does nothing, and that's home runs for you, not a broken model.${liveHtml}${btHtml}`;
   const rb=els("btRun");if(rb)rb.addEventListener("click",runBacktest);
 }
 function readBacktest(){try{return JSON.parse(localStorage.getItem("hitlist.hrbt")||"null");}catch(e){return null;}}
@@ -689,7 +689,7 @@ async function shareList(){
       x.save();x.shadowColor="rgba(0,0,0,.5)";x.shadowBlur=24;x.shadowOffsetY=8;x.drawImage(m,44,36,mw,mh);x.restore();}catch(e){}
     // lockup
     x.textBaseline="alphabetic";
-    x.fillStyle="rgba(255,255,255,.92)";x.font='400 34px "Anton"';x.fillText("H O N K Y   J E F E ' S",300,120);
+    x.fillStyle="rgba(255,255,255,.92)";x.font='400 34px "Anton"';x.fillText("E L   J E F E ' S",300,120);
     x.font='400 108px "Anton"';
     let hitW;
     try{
@@ -733,9 +733,9 @@ async function shareList(){
     x.fillText("an estimate, not a promise",W/2,H-30);x.textAlign="left";
     const blob=await new Promise(r=>c.toBlob(r,"image/png"));
     if(!blob)throw new Error("canvas export failed");
-    const file=new File([blob],"honky-jefes-hit-list-"+LASTDATE+".png",{type:"image/png"});
+    const file=new File([blob],"el-jefes-hit-list-"+LASTDATE+".png",{type:"image/png"});
     if(navigator.canShare&&navigator.canShare({files:[file]})){
-      await navigator.share({files:[file],title:"Honky Jefe's Hit List"});
+      await navigator.share({files:[file],title:"El Jefe's Hit List"});
     }else{
       const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=file.name;a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href),4000);
@@ -792,7 +792,7 @@ async function loadRecord(){
     return `<div class="bandrow"><span class="lbl">said ${bandLbl(b)}</span><span class="bar"><i style="width:${act}%"></i><b style="left:${tgt}%"></b></span><span class="val">hit ${act}% (${b.hits}/${b.n})</span></div>
       <div class="bandverdict">${verdict}</div>`;
   }).join("");
-  const calHead=bands?`<div class="secsub" style="margin:14px 0 6px"><b style="color:var(--chalk)">Is the score honest?</b> Each row compares what the model <i>said</i> to what <i>actually happened</i>. The white tick is the promise. A bar that reaches it means the score means what it says.</div>`:"";
+  const calHead=bands?`<div class="secsub" style="margin:14px 0 6px"><b style="color:var(--chalk)">Does the Jefe keep his word?</b> Each row compares what the score <i>said</i> to what <i>actually happened</i>. The white tick is the promise. A bar that reaches it means the number means what it says.</div>`:"";
   const days=(j.days||[]).filter(d=>d.graded).slice(0,7).map(d=>{
     const hs=d.picks.filter(p=>p.outcome==="hit").length,ms=d.picks.filter(p=>p.outcome==="miss").length;
     const chips=d.picks.map(p=>{
