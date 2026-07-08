@@ -1,4 +1,4 @@
-// Results tracking for Honky Jefe's Hit List.
+// Results tracking for El Jefe's Hit List.
 // Actions:
 //   POST ?action=save    body: {date, firstPitch, picks:[{id,name,team,opp,prob,gamePk,confirmed}]}
 //   GET  ?action=record  -> {days:[...], summary:{...}}
