@@ -38,11 +38,13 @@
   h1 .acc{color:var(--amber)}
   .brand-kick{display:block;font-family:"Anton",sans-serif;font-size:clamp(20px,5.4vw,36px);letter-spacing:.24em;text-transform:uppercase;color:var(--chalk);opacity:.9;margin:0 0 0 2px}
   .brandrow{display:flex;align-items:flex-start;gap:16px;margin-top:4px;margin-bottom:14px}
-  .logoframe{position:relative;flex:0 0 auto;display:block;align-self:flex-start}
-  .brandlogo{height:clamp(212px,52vw,425px);width:auto;max-width:41vw;display:block;
+  .leftcol{flex:0 0 auto;display:flex;flex-direction:column;gap:12px;width:clamp(150px,42vw,300px)}
+  .logoframe{position:relative;display:block;width:100%}
+  .brandlogo{width:100%;height:auto;display:block;
     filter:drop-shadow(0 8px 22px rgba(0,0,0,.5)) drop-shadow(0 3px 10px rgba(228,0,43,.3))}
-  .brandtext{min-width:0}
-  @media (max-width:365px){h1.wordmark{font-size:13vw}.brandlogo{height:50vw;max-width:41vw}}
+  .leftcol .controls{margin:0}
+  .brandtext{flex:1 1 auto;min-width:0}
+  @media (max-width:365px){h1.wordmark{font-size:13vw}}
 
   h1.wordmark{font-family:"Anton","Archivo",sans-serif;font-weight:400;font-stretch:normal;text-transform:uppercase;letter-spacing:.006em;white-space:nowrap;display:inline-block;
     font-size:clamp(92px,25vw,190px);line-height:.86;margin:0 0 4px;color:var(--chalk);
@@ -64,10 +66,12 @@
   h1.wordmark::after{content:"";display:block;width:100%;height:7px;background:var(--redsolid);border-radius:3px;margin-top:.16em;box-shadow:0 0 18px rgba(228,0,43,.45)}
   .sub{color:var(--muted);max-width:64ch;font-size:14.5px}
 
-  .controls{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin:22px 0 6px}
+  .controls{display:flex;flex-direction:column;gap:11px;align-items:stretch;margin:14px 0 0}
   .field{display:flex;flex-direction:column;gap:6px}
   .field label{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
-  input[type=date],input[type=text]{background:var(--bg2);border:1px solid var(--line);color:var(--chalk);font-family:"IBM Plex Mono",monospace;font-size:14px;padding:9px 11px;border-radius:var(--radius)}
+  input[type=date],input[type=text]{background:var(--bg2);border:1px solid var(--line);color:var(--chalk);font-family:"IBM Plex Mono",monospace;font-size:14px;padding:11px 13px;border-radius:var(--radius);width:100%}
+  .controls .explainer{margin:0}
+  .controls>button.run,.controls>a.livebtn{width:100%;justify-content:center;text-align:center}
   input[type=text]{min-width:240px}
   button.run{background:var(--redsolid);color:#fff;border:none;cursor:pointer;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em;padding:11px 22px;border-radius:var(--radius);font-stretch:90%}
   a.livebtn{display:inline-flex;align-items:center;justify-content:center;background:rgba(91,155,255,.12);color:var(--grass);border:1.5px solid var(--grass);text-decoration:none;cursor:pointer;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em;padding:10px 20px;border-radius:var(--radius);font-stretch:90%}
@@ -252,35 +256,34 @@
 <div class="wrap">
   <header>
     <div class="brandrow">
-      <span class="logoframe"><img class="brandlogo" src="mascot-plated.png" alt="El Jefe mascot" width="814" height="1138"></span>
-      <div class="brandtext">
-        <span class="brand-kick">El Jefe's</span>
-        <h1 class="wordmark"><img class="hitword" src="hit-word.png" alt="HIT" width="754" height="461"><br><span class="acc">List</span></h1>
-        <img class="subsign" src="hr-sign.png" alt="and Homerun Predictor" width="700" height="456">
-      </div>
-    </div>
-
-    <div class="explainer">
-      <button id="howBtn" aria-expanded="false">How this works ▾</button>
-      <div class="panel" id="howPanel">
-        <h4>What the numbers mean</h4>
-        <p><b>Hit score.</b> Our estimate of the chance this batter gets at least one hit today. It's calibrated to realistic hit rates, roughly the 50 to 82 percent range real hitters live in. Treat it as a way to compare and rank players, not as an exact betting line.</p>
-        <p><b>Contact skill.</b> The foundation of the score. It splits into two parts. First, how often a batter puts the ball in play, which strikeouts and walks eat into. That part is stable and reflects real skill. Second, what happens when he does make contact, which is noisier, so it leans toward league average. Two .280 hitters are not equal. The one who strikes out less gets more swings that can turn into hits. We judge the opposing pitcher the same way, keeping his strikeout rate separate from his contact quality, and we cross-check that contact quality against Statcast expected results so a lucky defense doesn't make him look better than he is. Since your batter only faces the starter two or three times, the opposing bullpen covers the rest of his at-bats.</p>
-        <p><b>Statcast luck check (xBA).</b> Expected batting average based on how hard and where he hits the ball. It's what his contact <i>should</i> be earning. When his real average sits above his xBA, the results have outrun the contact, so he's running hot and we trim the score. When it sits below, his contact deserves more than it's gotten, so we bump the score, because results tend to catch up to contact over time.</p>
-        <p><b>Pitcher and platoon.</b> A pitcher who gives up lots of hits raises the score, and a tough one lowers it. We also factor in how the batter does against that pitcher's hand, lefty or righty, which is a real and repeatable edge.</p>
-        <p><b>Park, weather, and form.</b> Hitter-friendly parks and warm air nudge the score up. Recent form counts for a little, but not much, because hot streaks mostly just reflect good hitters being good. Batter versus pitcher history is shown for context but barely counted, since those samples are too small to trust.</p>
-        <p class="tip">The thing that matters most isn't any stat: it's whether he's actually in the lineup. Cards say <b>Confirmed</b> or <b>Projected</b>. Lineups firm up 1–3 hours before first pitch. Not betting advice.</p>
-      </div>
-    </div>
+      <div class="leftcol">
+        <span class="logoframe"><img class="brandlogo" src="mascot-plated.png" alt="El Jefe mascot" width="814" height="1138"></span>
 
     <div class="controls">
+      <div class="explainer">
+        <button id="howBtn" aria-expanded="false">How this works ▾</button>
+        <div class="panel" id="howPanel">
+          <h4>What the numbers mean</h4>
+          <p><b>Hit score.</b> Our estimate of the chance this batter gets at least one hit today. It's calibrated to realistic hit rates, roughly the 50 to 82 percent range real hitters live in. Treat it as a way to compare and rank players, not as an exact betting line.</p>
+          <p><b>Contact skill.</b> The foundation of the score. It splits into two parts. First, how often a batter puts the ball in play, which strikeouts and walks eat into. That part is stable and reflects real skill. Second, what happens when he does make contact, which is noisier, so it leans toward league average. Two .280 hitters are not equal. The one who strikes out less gets more swings that can turn into hits. We judge the opposing pitcher the same way, keeping his strikeout rate separate from his contact quality, and we cross-check that contact quality against Statcast expected results so a lucky defense doesn't make him look better than he is. Since your batter only faces the starter two or three times, the opposing bullpen covers the rest of his at-bats.</p>
+          <p><b>Statcast luck check (xBA).</b> Expected batting average based on how hard and where he hits the ball. It's what his contact <i>should</i> be earning. When his real average sits above his xBA, the results have outrun the contact, so he's running hot and we trim the score. When it sits below, his contact deserves more than it's gotten, so we bump the score, because results tend to catch up to contact over time.</p>
+          <p><b>Pitcher and platoon.</b> A pitcher who gives up lots of hits raises the score, and a tough one lowers it. We also factor in how the batter does against that pitcher's hand, lefty or righty, which is a real and repeatable edge.</p>
+          <p><b>Park, weather, and form.</b> Hitter-friendly parks and warm air nudge the score up. Recent form counts for a little, but not much, because hot streaks mostly just reflect good hitters being good. Batter versus pitcher history is shown for context but barely counted, since those samples are too small to trust.</p>
+          <p class="tip">The thing that matters most isn't any stat: it's whether he's actually in the lineup. Cards say <b>Confirmed</b> or <b>Projected</b>. Lineups firm up 1–3 hours before first pitch. Not betting advice.</p>
+        </div>
+      </div>
       <div class="field">
         <label for="date">Slate date</label>
         <input type="date" id="date" />
       </div>
-      <div class="btncol">
-        <button class="run" id="run">Generate Lists</button>
-        <a class="livebtn" id="liveLink" href="live.html">Live box scores →</a>
+      <button class="run" id="run">Generate Lists</button>
+      <a class="livebtn" id="liveLink" href="live.html">Live box scores →</a>
+    </div>
+      </div>
+      <div class="brandtext">
+        <span class="brand-kick">El Jefe's</span>
+        <h1 class="wordmark"><img class="hitword" src="hit-word.png" alt="HIT" width="754" height="461"><br><span class="acc">List</span></h1>
+        <img class="subsign" src="hr-sign.png" alt="and Homerun Predictor" width="700" height="456">
       </div>
     </div>
 
