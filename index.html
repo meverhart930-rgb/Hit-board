@@ -205,7 +205,7 @@
 
   footer{margin-top:40px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:12.5px;line-height:1.6}
   /* ---- streak watch + track record ---- */
-  .taphint{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.04em;color:var(--muted);text-align:center;margin:6px 0 12px;padding:8px 10px;border:1px dashed var(--line);border-radius:var(--radius)}
+  .taphint{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.04em;color:var(--muted);text-align:center;margin:2px 0 12px;padding:7px 10px;border-radius:var(--radius);background:rgba(255,255,255,.03)}
   #modeTabs{display:flex;gap:8px;margin:18px 0 10px}
   .tab{flex:1;background:transparent;border:1.5px solid var(--line);color:var(--muted);cursor:pointer;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em;padding:10px 0;border-radius:var(--radius);font-stretch:90%}
   .tab.active{background:var(--redsolid);border-color:var(--redsolid);color:#fff}
@@ -266,11 +266,11 @@
       <button id="howBtn" aria-expanded="false">How this works ▾</button>
       <div class="panel" id="howPanel">
         <h4>What the numbers mean</h4>
-        <p><b>Hit score</b> — our estimate of the chance this batter gets at least one hit today, calibrated to realistic hit rates (roughly the 50–82% range real hitters live in). It's an estimate, so it's best for comparing and ranking players rather than as an exact betting line.</p>
-        <p><b>Contact skill</b> — the foundation, now built from two parts: how often a batter puts the ball in play (strikeouts and walks cost hit chances — this part is stable, real skill) and what happens when he does (noisier, so it leans toward league average). Two .280 hitters aren't equal: the low-strikeout one gets more swings that can become hits. The opposing pitcher is judged the same way — strikeout rate separate from contact quality, with his contact quality cross-checked against Statcast expected results so a lucky defense doesn't flatter him. And since your batter only faces the starter two or three times, the opposing bullpen covers the remaining at-bats.</p>
-        <p><b>Statcast luck check (xBA)</b> — expected batting average from how hard and where he hits the ball, i.e. what his contact <i>should</i> be earning. When his real average is above his xBA, the results have outrun the contact (running hot — we trim). When it's below, his contact deserves more than it's gotten (shortchanged — we bump, because results tend to catch up to contact).</p>
-        <p><b>Pitcher &amp; platoon</b> — a pitcher who gives up lots of hits raises the score; a tough one lowers it. We also use how the batter hits that pitcher's hand (lefty vs righty), which is a real, repeatable edge.</p>
-        <p><b>Park, weather &amp; form</b> — hitter-friendly parks and warm air nudge it up; recent form is a small factor because hot streaks mostly just reflect good hitters. Batter-vs-pitcher history is shown but barely counted — the samples are too small to trust.</p>
+        <p><b>Hit score.</b> Our estimate of the chance this batter gets at least one hit today. It's calibrated to realistic hit rates, roughly the 50 to 82 percent range real hitters live in. Treat it as a way to compare and rank players, not as an exact betting line.</p>
+        <p><b>Contact skill.</b> The foundation of the score. It splits into two parts. First, how often a batter puts the ball in play, which strikeouts and walks eat into. That part is stable and reflects real skill. Second, what happens when he does make contact, which is noisier, so it leans toward league average. Two .280 hitters are not equal. The one who strikes out less gets more swings that can turn into hits. We judge the opposing pitcher the same way, keeping his strikeout rate separate from his contact quality, and we cross-check that contact quality against Statcast expected results so a lucky defense doesn't make him look better than he is. Since your batter only faces the starter two or three times, the opposing bullpen covers the rest of his at-bats.</p>
+        <p><b>Statcast luck check (xBA).</b> Expected batting average based on how hard and where he hits the ball. It's what his contact <i>should</i> be earning. When his real average sits above his xBA, the results have outrun the contact, so he's running hot and we trim the score. When it sits below, his contact deserves more than it's gotten, so we bump the score, because results tend to catch up to contact over time.</p>
+        <p><b>Pitcher and platoon.</b> A pitcher who gives up lots of hits raises the score, and a tough one lowers it. We also factor in how the batter does against that pitcher's hand, lefty or righty, which is a real and repeatable edge.</p>
+        <p><b>Park, weather, and form.</b> Hitter-friendly parks and warm air nudge the score up. Recent form counts for a little, but not much, because hot streaks mostly just reflect good hitters being good. Batter versus pitcher history is shown for context but barely counted, since those samples are too small to trust.</p>
         <p class="tip">The thing that matters most isn't any stat: it's whether he's actually in the lineup. Cards say <b>Confirmed</b> or <b>Projected</b>. Lineups firm up 1–3 hours before first pitch. Not betting advice.</p>
       </div>
     </div>
@@ -288,12 +288,12 @@
 
     <div class="drawer" id="drawer" style="display:none" aria-hidden="true">
       <div>
-        <h4>Signal weights — how much each moves the score</h4>
+        <h4>Signal weights: how much each one moves the score</h4>
         <div class="wkrow">
           <div class="wk"><div class="top"><span class="nm" style="color:var(--clay)">Pitcher</span><span class="vv" id="v-pit">0.60</span></div><input type="range" id="w-pit" min="0" max="1" step="0.05" value="0.60"><small>Opponent AVG-against vs league. Strong real signal.</small></div>
           <div class="wk"><div class="top"><span class="nm" style="color:var(--plat)">Platoon L/R</span><span class="vv" id="v-plat">0.45</span></div><input type="range" id="w-plat" min="0" max="1" step="0.05" value="0.45"><small>Batter's AVG vs the pitcher's hand. The biggest split that matters.</small></div>
           <div class="wk"><div class="top"><span class="nm" style="color:var(--env)">Park &amp; conditions</span><span class="vv" id="v-env">0.50</span></div><input type="range" id="w-env" min="0" max="1" step="0.05" value="0.50"><small>Hit park factor × a small temperature nudge.</small></div>
-          <div class="wk"><div class="top"><span class="nm" style="color:var(--form)">Recent form</span><span class="vv" id="v-form">0.25</span></div><input type="range" id="w-form" min="0" max="1" step="0.05" value="0.25"><small>Last-15 AVG vs season. Mostly noise — kept small.</small></div>
+          <div class="wk"><div class="top"><span class="nm" style="color:var(--form)">Recent form</span><span class="vv" id="v-form">0.25</span></div><input type="range" id="w-form" min="0" max="1" step="0.05" value="0.25"><small>Last 15 games vs season average. Mostly noise, so it's kept small.</small></div>
           <div class="wk"><div class="top"><span class="nm" style="color:var(--bvp)">Batter vs pitcher</span><span class="vv" id="v-bvp">0.10</span></div><input type="range" id="w-bvp" min="0" max="1" step="0.05" value="0.10"><small>Career H/AB vs this arm. Near-zero predictive value.</small></div>
           <div class="wk"><div class="top"><span class="nm" style="color:var(--xba)">Statcast xBA</span><span class="vv" id="v-xba">0.50</span></div><input type="range" id="w-xba" min="0" max="1" step="0.05" value="0.50"><small>How much to trust expected AVG over actual. Regresses out luck. Needs the function.</small></div>
         </div>
@@ -314,13 +314,13 @@
     <div class="lnote" id="lineupNote" style="display:none"></div>
   </header>
 
-  <div id="status" class="status">Pick a date and generate the lists. Lineups firm up ~1–3 hours before first pitch — earlier than that you get projected pools, flagged on each card. Weather only loads for today and the next ~16 days.</div>
+  <div id="status" class="status">Pick a date and generate the lists. Lineups firm up about 1 to 3 hours before first pitch. Earlier than that you get projected pools, and every projected pick is flagged on its card. Weather only loads for today and the next 16 days or so.</div>
   <div id="modeTabs" style="display:none">
     <button id="tabHit" class="tab active">Hit List</button>
     <button id="tabHR" class="tab">Homerun List</button>
   </div>
   <div id="hrpanel" style="display:none"></div>
-  <div id="taphint" class="taphint" style="display:none">Tap a player to expand — why he's ranked, what's moving his score, and the full stat line.</div>
+  <div id="taphint" class="taphint" style="display:none">Tap any player to see why he's ranked, what's moving his score, and his full stat line.</div>
   <div id="sharewrap" style="display:none;text-align:center;margin:0 0 14px"><button id="shareBtn" class="sharebtn">Share this list</button></div>
   <div class="board" id="board"></div>
 
@@ -328,7 +328,7 @@
   <section id="record"></section>
 
   <footer>
-    <p class="caveat"><b>Read this.</b> The hit score is a calibrated estimate of the chance of at least one hit — tightened toward real-world hit rates so it no longer runs hot, but still an estimate, best for ranking. Contact skill (adjusted for luck via Statcast xBA) drives most of it; pitcher and platoon are the next real signals. <b>Batter-vs-pitcher samples are near-meaningless</b> and weighted almost to zero. <b>Day/night is shown, not scored.</b> Weather barely moves hit odds; its real use is the rain-out flag. Home-run chance is a rough park- and pitcher-adjusted estimate. The one thing that matters most is whether he actually starts — cards say Confirmed or Projected. Books price these props efficiently, so a high score is usually a known favorite, not free money. Data: MLB Stats API + Baseball Savant + Open-Meteo. Not betting advice.</p>
+    <p class="caveat"><b>Read this before you trust a number.</b> The hit score is a calibrated estimate of the chance of at least one hit. We tighten it toward real hit rates so it doesn't run hot, but it's still an estimate, best used for ranking. Contact skill, adjusted for luck with Statcast xBA, drives most of it. Pitcher and platoon are the next real signals. Batter versus pitcher samples are close to meaningless, so we weight them near zero. Day and night is shown but not scored. Weather barely moves hit odds, and its real value is the rain-out flag. Home run chance is a rough estimate adjusted for park and pitcher. The thing that matters most is simply whether he starts, so check whether the card says Confirmed or Projected. Sportsbooks price these props well, so a high score usually means a known favorite, not free money. Data comes from the MLB Stats API, Baseball Savant, and Open-Meteo. This is not betting advice.</p>
   </footer>
 </div>
 
@@ -412,7 +412,7 @@ els("howBtn").addEventListener("click",()=>{const p=els("howPanel");const o=p.cl
       render(saved.top,saved.slate.lg);
       renderStreaks(saved.hot||[]);
       const t=new Date(saved.builtAt);
-      setStatus(`Restored the list you built at ${t.getHours()}:${String(t.getMinutes()).padStart(2,"0")}. Lineups may have moved since — tap <b>Generate Lists</b> for a fresh run.`);
+      setStatus(`Restored the list you built at ${t.getHours()}:${String(t.getMinutes()).padStart(2,"0")}. Lineups may have moved since then, so tap <b>Generate Lists</b> for a fresh run.`);
     }
   }catch(e){}
   },0);
@@ -489,10 +489,10 @@ async function run(){
       const t=fpd.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
       const w0=new Date(fpd.getTime()-90*60000).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
       const w1=new Date(fpd.getTime()-30*60000).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
-      fpBit=now<fpd?` First pitch ${t} — best final build ${w0}–${w1}; the list tracked for the record locks at ${t}.`:"";
+      fpBit=now<fpd?` First pitch is ${t}. Your best final build is ${w0} to ${w1}. The list tracked for your record locks at ${t}.`:"";
     }
-    if(confRatio>=0.999){ln.className="lnote ok";ln.textContent="✓ All lineups confirmed — these picks use real starting lineups."+fpBit;}
-    else if(confRatio<=0){ln.className="lnote warn";ln.textContent="⚠ No lineups posted yet. Every pick is projected — who actually starts matters more than any stat here."+(fpBit||" Rebuild 1–3 hours before first pitch.");}
+    if(confRatio>=0.999){ln.className="lnote ok";ln.textContent="✓ All lineups confirmed. These picks use real starting lineups."+fpBit;}
+    else if(confRatio<=0){ln.className="lnote warn";ln.textContent="⚠ No lineups posted yet, so every pick is projected. Who actually starts matters more than any stat here."+(fpBit||" Rebuild 1 to 3 hours before first pitch.");}
     else{ln.className="lnote warn";ln.textContent=`⚠ ${confirmedGames} of ${games.length} lineups posted. Confirmed games use real lineups${F.confirmedOnly?" and are shown by default":"; projected picks are tagged"}.`+(fpBit||" Rebuild closer to first pitch for the rest.");}
     ln.style.display="block";
 
@@ -502,7 +502,7 @@ async function run(){
     pool0.sort((a,b)=>b.pBase-a.pBase);
     const shortlist=pool0.slice(0,28);
 
-    setStatus("Enriching shortlist — platoon splits, recent form, matchup history…",false,true);
+    setStatus("Adding platoon splits, recent form, and matchup history to the shortlist…",false,true);
     await pool(shortlist,async c=>{
       await enrichSplits(c,season);
       await enrichForm(c,season);
@@ -529,7 +529,7 @@ async function run(){
   }catch(e){
     console.error(e);
     els("board").innerHTML="";
-    setStatus("Couldn't reach the data feeds — a source may be down or your connection blocked the request. Wait a minute and tap <b>Generate Lists</b> again.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
+    setStatus("Couldn't reach the data feeds. A source may be down, or your connection blocked the request. Wait a minute and tap <b>Generate Lists</b> again.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
   }
   finish(btn);
 }
@@ -563,14 +563,14 @@ function renderHRPanel(){
   let liveHtml;
   if(!RECDATA){liveHtml=`<div style="margin-top:10px;color:var(--muted)">Loading the record…</div>`;}
   else if(!hr||!hr.picks){
-    liveHtml=`<div style="margin-top:10px"><b style="color:var(--chalk)">Homerun List record</b><div style="margin-top:4px">Tracking is live — every generated list logs its top 10 homer picks and grades them once the games go final. First graded night shows here tomorrow.</div></div>`;
+    liveHtml=`<div style="margin-top:10px"><b style="color:var(--chalk)">Homerun List record</b><div style="margin-top:4px">Tracking is live. Every generated list logs its top 10 homer picks and grades them once the games go final. Your first graded night shows up here tomorrow.</div></div>`;
   }else{
     const rows=hr.bands.filter(b=>b.n>0).map(b=>{
       const meta=HRLBL.find(m=>Math.abs(m.lo-b.lo)<0.001)||{lbl:Math.round(b.lo*100)+"%+",tgt:(b.lo*100)+1.5};
       const act=100*b.hr/b.n;
       return `<div class="bandrow"><span class="lbl">said ${meta.lbl}</span><span class="bar"><i style="width:${Math.min(100,act*5)}%"></i><b style="left:${Math.min(100,meta.tgt*5)}%"></b></span><span class="val">homered ${act.toFixed(1)}% (${b.hr}/${b.n})</span></div>`;
     }).join("");
-    liveHtml=`<div style="margin-top:10px"><b style="color:var(--chalk)">Homerun List record — live</b>
+    liveHtml=`<div style="margin-top:10px"><b style="color:var(--chalk)">Homerun List record, live</b>
       <div style="margin-top:4px;font-family:'Anton',sans-serif;font-size:26px;color:var(--grass)">${hr.homers}/${hr.picks} · ${(100*hr.rate).toFixed(1)}%</div>
       <div style="font-size:12px">picks that homered, graded nightly against the box scores</div>${rows}
       <div style="margin-top:4px;font-size:12px">White tick = what the score promised. Bars use a 0–20% scale.</div></div>`;
@@ -583,13 +583,13 @@ function renderHRPanel(){
       const act=(100*b.hr/b.n).toFixed(1);
       return `<div class="bandrow"><span class="lbl">said ${b.lbl}</span><span class="bar"><i style="width:${Math.min(100,act*5)}%"></i><b style="left:${Math.min(100,b.tgt*5)}%"></b></span><span class="val">homered ${act}% (${b.hr}/${b.n})</span></div>`;
     }).join("");
-    btHtml=`<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font-size:12px"><b style="color:var(--muted)">Backtest footnote</b> — last ${bt.days} days, ${bt.picks} reconstructed picks; top pick homered ${bt.top1.hr}/${bt.top1.n} nights. Not a live record: it knew who actually played, so it runs a touch optimistic.${rows}</div>`;
+    btHtml=`<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font-size:12px"><b style="color:var(--muted)">Backtest footnote.</b> Last ${bt.days} days, ${bt.picks} reconstructed picks. The top pick homered on ${bt.top1.hr} of ${bt.top1.n} nights. This is not a live record. It knew who actually played, so it runs a touch optimistic.${rows}</div>`;
   }else{
     btHtml=`<div class="bt"><button id="btRun">Run 28-day backtest</button>
       <span id="btProg" style="margin-left:10px;font-family:'IBM Plex Mono',monospace;font-size:12px"></span>
       <div style="margin-top:6px;font-size:12px">One-time, ~2–3 minutes: replays the last four weeks with stats reconstructed as of each morning and grades who actually homered. Keep the page open while it runs.</div></div>`;
   }
-  els("hrpanel").innerHTML=`<b style="color:var(--chalk)">Homerun List — v1.</b> Same pool, re-ranked by home-run chance (batter power, pitcher HR tendency, park). Even a great top pick lands ~15%: most nights the best dinger pick does nothing — that's home runs, not a broken model.${liveHtml}${btHtml}`;
+  els("hrpanel").innerHTML=`<b style="color:var(--chalk)">Homerun List, v1.</b> The same pool, re-ranked by home run chance from batter power, pitcher HR tendency, and park. Even a great top pick only lands around 15%. most nights the best dinger pick does nothing, and that's home runs for you, not a broken model.${liveHtml}${btHtml}`;
   const rb=els("btRun");if(rb)rb.addEventListener("click",runBacktest);
 }
 function readBacktest(){try{return JSON.parse(localStorage.getItem("hitlist.hrbt")||"null");}catch(e){return null;}}
@@ -751,7 +751,7 @@ function renderStreaks(pool0){
   if(!hot.length){el.style.display="none";el.innerHTML="";return;}
   el.style.display="block";
   el.innerHTML=`<h2 class="sechead">Streak <span class="acc">Watch</span></h2>
-    <p class="secsub">Active hit streaks among today's rated bats (games with an official at-bat; walk-only games don't break a streak).</p>`+
+    <p class="secsub">Active hit streaks among today's rated batters. A streak counts games with an official at-bat, and a walk-only game doesn't break it.</p>`+
     hot.map(c=>`<div class="strow">
       <span class="pic"><img src="${HEAD(c.id)}" alt="" loading="lazy" onerror="this.style.display='none'"></span>
       <div style="min-width:0">
@@ -777,7 +777,7 @@ async function loadRecord(){
     const t=s.totalDays||0,p=s.pendingDays||0;
     const msg=t===0
       ?"No boards logged yet. Generate today's hit list and it's saved automatically; results get graded once the games go final."
-      :`${p} day${p===1?"":"s"} saved and awaiting grading. Grading runs automatically when you open this page after that day's games are final — check back after tonight's slate wraps, or tomorrow morning.`;
+      :`${p} day${p===1?"":"s"} saved and awaiting grading. Grading runs automatically when you open this page after that day's games are final. Check back after tonight's slate wraps up, or tomorrow morning.`;
     el.innerHTML=`<h2 class="sechead">Track <span class="acc">Record</span></h2>
       <div class="recwrap"><div class="secsub" style="margin:0">${msg}</div></div>`;
     return;
@@ -792,7 +792,7 @@ async function loadRecord(){
     return `<div class="bandrow"><span class="lbl">said ${bandLbl(b)}</span><span class="bar"><i style="width:${act}%"></i><b style="left:${tgt}%"></b></span><span class="val">hit ${act}% (${b.hits}/${b.n})</span></div>
       <div class="bandverdict">${verdict}</div>`;
   }).join("");
-  const calHead=bands?`<div class="secsub" style="margin:14px 0 6px"><b style="color:var(--chalk)">Is the score honest?</b> Each row compares what the model <i>said</i> to what <i>actually happened</i>. The white tick is the promise — a bar reaching it means the score means what it says.</div>`:"";
+  const calHead=bands?`<div class="secsub" style="margin:14px 0 6px"><b style="color:var(--chalk)">Is the score honest?</b> Each row compares what the model <i>said</i> to what <i>actually happened</i>. The white tick is the promise. A bar that reaches it means the score means what it says.</div>`:"";
   const days=(j.days||[]).filter(d=>d.graded).slice(0,7).map(d=>{
     const hs=d.picks.filter(p=>p.outcome==="hit").length,ms=d.picks.filter(p=>p.outcome==="miss").length;
     const chips=d.picks.map(p=>{
@@ -802,7 +802,7 @@ async function loadRecord(){
     }).join("");
     return `<div class="dayrow"><b>${d.date}</b> · ${hs}-for-${hs+ms}${d.picks.some(p=>p.outcome==="dnp")?" (DNP excluded)":""}<br>${chips}</div>`;
   }).join("");
-  const small=s.picks<50?`<p class="secsub" style="margin-top:10px">Small sample (${s.picks} graded picks) — treat the percentages as noisy until there's a few weeks of data.</p>`:"";
+  const small=s.picks<50?`<p class="secsub" style="margin-top:10px">Small sample so far, just ${s.picks} graded picks. Treat these percentages as noisy until there are a few weeks of data.</p>`:"";
   el.innerHTML=`<h2 class="sechead">Track <span class="acc">Record</span></h2>
     <div class="recwrap">
       <div class="recbig">${s.hits}/${s.picks} · ${pct(s.rate)}<small>picks that got a hit, across ${s.gradedDays} graded day${s.gradedDays===1?"":"s"}${s.dnp?` · ${s.dnp} DNP excluded`:""}</small></div>
@@ -1033,7 +1033,7 @@ async function enrichBvP(c,season){
 
 function renderSlate(n,conf,lg,wx){
   const s=els("slate");s.style.display="flex";
-  const wlbl=wx==="on"?"on":(wx==="down"?"unavailable — skipped":"off");
+  const wlbl=wx==="on"?"on":(wx==="down"?"unavailable, skipped":"off");
   s.innerHTML=`<span>Slate · <b>${n}</b> games</span><span>Confirmed lineups · <b>${conf}/${n}</b></span><span>League AVG · <b>${lg.toFixed(3)}</b></span><span>Weather · <b>${wlbl}</b></span>`;
 }
 const pct=x=>(x*100).toFixed(1)+"%";
@@ -1047,11 +1047,11 @@ function driverText(key,c,lg){
     const kr=c.oppPitcher.bf>0?c.oppPitcher.k/c.oppPitcher.bf:null;
     const kBit=kr!=null&&kr>=0.27?" and misses a lot of bats":(kr!=null&&kr<=0.17?" and rarely strikes anyone out":"");
     return oa>=lg?`${nm} gives up a lot of hits this year (${oa.toFixed(3)} allowed vs ${lg.toFixed(3)} league)${kBit}, so the matchup helps. The bullpen behind him is factored in too.`:`${nm} is tough, holding hitters to ${oa.toFixed(3)} (league is ${lg.toFixed(3)})${kBit}, so the matchup works against him. The bullpen behind him is factored in too.`;}
-  if(key==="xba"){if(c.xba==null)return null;return c.xba<c.avg?`His contact quality says he should be hitting about ${c.xba.toFixed(3).replace(/^0/,"")}, but he's at ${c.avg.toFixed(3).replace(/^0/,"")} — the results have outrun the contact (lucky so far), so we trim the score.`:`His contact quality says he should be hitting about ${c.xba.toFixed(3).replace(/^0/,"")}, but he's only at ${c.avg.toFixed(3).replace(/^0/,"")} — the results have lagged the contact (shortchanged so far), so we nudge the score up.`;}
-  if(key==="plat"){const sp=relSplit(c);if(!sp)return null;const hand=c.oppHand==="L"?"left-handed":"right-handed";return sp.avg>=c.avg?`He hits ${hand} pitching well (${sp.avg.toFixed(3)}), and today's starter is ${hand} — a matchup edge.`:`He hits ${hand} pitching worse (${sp.avg.toFixed(3)}) than usual, and today's starter is ${hand} — a tougher day.`;}
+  if(key==="xba"){if(c.xba==null)return null;return c.xba<c.avg?`His contact quality says he should be hitting about ${c.xba.toFixed(3).replace(/^0/,"")}, but he's at ${c.avg.toFixed(3).replace(/^0/,"")}. The results have outrun the contact, so he's been lucky and we trim the score.`:`His contact quality says he should be hitting about ${c.xba.toFixed(3).replace(/^0/,"")}, but he's only at ${c.avg.toFixed(3).replace(/^0/,"")}. The results have lagged the contact, so he's been shortchanged and we nudge the score up.`;}
+  if(key==="plat"){const sp=relSplit(c);if(!sp)return null;const hand=c.oppHand==="L"?"left-handed":"right-handed";return sp.avg>=c.avg?`He hits ${hand} pitching well (${sp.avg.toFixed(3)}), and today's starter is ${hand}, so the matchup favors him.`:`He hits ${hand} pitching worse than usual (${sp.avg.toFixed(3)}), and today's starter is ${hand}, so it's a tougher day.`;}
   if(key==="env"){const p=[];if(c.parkF>1.01)p.push("a hitter-friendly park");else if(c.parkF<0.99)p.push("a pitcher-friendly park");if(c.wx&&!c.wx.roof&&typeof c.wx.temp==="number"){if(c.wx.temp>=85)p.push("warm air that helps the ball carry");else if(c.wx.temp<=50)p.push("cold air that suppresses offense");}if(c.wx&&c.wx.roof)p.push("a climate-controlled roof");return p.length?`Playing in ${p.join(" and ")}.`:`Park and weather are close to neutral today.`;}
   if(key==="form"){if(c.recentAVG==null)return null;return c.recentAVG>=c.avg?`He's swinging a hot bat lately (${c.recentAVG.toFixed(3)} over his last ${c.recentGames} games).`:`He's been a bit cold lately (${c.recentAVG.toFixed(3)} over his last ${c.recentGames} games).`;}
-  if(key==="bvp"){if(c.bvpAB<5)return null;return `He's ${c.bvpH}-for-${c.bvpAB} against this pitcher in his career — too small a sample to mean much, so it's barely counted.`;}
+  if(key==="bvp"){if(c.bvpAB<5)return null;return `He's ${c.bvpH} for ${c.bvpAB} against this pitcher in his career. That's too small a sample to mean much, so it's barely counted.`;}
   return null;
 }
 
@@ -1089,10 +1089,10 @@ function render(top,lg,mode){mode=mode||"hit";
     const sp=relSplit(c);
     const kn=[];
     kn.push(`<div class="kn"><span class="kl">Batting average<span class="kh">how often he gets a hit per at-bat</span></span><span class="kv amber">${c.avg.toFixed(3)}</span></div>`);
-    if(c.xba!=null&&c.xba>0)kn.push(`<div class="kn"><span class="kl">Expected average (xBA)<span class="kh">what his contact quality should earn — luck removed</span></span><span class="kv">${c.xba.toFixed(3)}</span></div>`);
+    if(c.xba!=null&&c.xba>0)kn.push(`<div class="kn"><span class="kl">Expected average (xBA)<span class="kh">what his contact quality should earn, with luck removed</span></span><span class="kv">${c.xba.toFixed(3)}</span></div>`);
     if(sp)kn.push(`<div class="kn"><span class="kl">vs ${c.oppHand==="L"?"left":"right"}-handers<span class="kh">how he hits pitchers like today's starter</span></span><span class="kv">${sp.avg.toFixed(3)}</span></div>`);
     if(c.recentAVG!=null)kn.push(`<div class="kn"><span class="kl">Last ${c.recentGames} games<span class="kh">recent form</span></span><span class="kv">${c.recentAVG.toFixed(3)}</span></div>`);
-    if(c.oppPitcher)kn.push(`<div class="kn"><span class="kl">Pitcher allows<span class="kh">what hitters bat off SP ${c.oppPitcherName||"the starter"} this season — lower means a tougher pitcher</span></span><span class="kv">${c.oppPitcher.oppAVG.toFixed(3)}</span></div>`);
+    if(c.oppPitcher)kn.push(`<div class="kn"><span class="kl">Pitcher allows<span class="kh">what hitters bat off SP ${c.oppPitcherName||"the starter"} this season. Lower means a tougher pitcher</span></span><span class="kv">${c.oppPitcher.oppAVG.toFixed(3)}</span></div>`);
     if(c.hrProb!=null)kn.push(`<div class="kn"><span class="kl">Home run chance<span class="kh">est. chance of a HR today (park + pitcher adjusted)</span></span><span class="kv">${(c.hrProb*100).toFixed(1)}%</span></div>`);
 
     // ---- Homerun List mode: explain the HR math, not the hit math ----
@@ -1108,16 +1108,16 @@ function render(top,lg,mode){mode=mode||"hit";
       why=`<b>${c.name}</b> homers in about <span class="k">${rateTxt}%</span> of his trips to the plate (<span class="k">${c.hr}</span> HR this season) and is ${lineupBit}, so he should bat around <span class="k">${expPA(c).toFixed(1)}</span> times.${whyBits.length?` Biggest factor beyond that: ${whyBits[0]}.`:""}`;
       const hrDrv=[
         (hb.pitRel!=null&&Math.abs(hb.pit)>0.001)?{lab:"Pitcher HR tendency",col:"var(--clay)",v:hb.pit,
-          t:`SP ${nm} allows homers at ${hb.pitRel.toFixed(2)}× the league rate this season${hb.pitRel>1?" — the matchup helps the power play":" — tough to take deep"}.`}:null,
+          t:`SP ${nm} allows homers at ${hb.pitRel.toFixed(2)}x the league rate this season${hb.pitRel>1?", so the matchup helps the power play":", so he's tough to take deep"}.`}:null,
         (Math.abs(hb.env)>0.001)?{lab:"Park",col:"var(--env)",v:hb.env,
           t:`This yard plays ${parkPct>=0?"+":""}${parkPct}% for home runs vs an average park.`}:null
       ].filter(Boolean).sort((a,b)=>Math.abs(b.v)-Math.abs(a.v));
       drvHtml=hrDrv.map(d=>`<div class="drv"><span class="dot" style="background:${d.col}"></span><div><div class="drv-h"><b>${d.lab}</b> <span class="delta ${d.v>0?"pos":"neg"}">${signed(d.v)} pts</span></div><div class="drv-t">${d.t}</div></div></div>`).join("")
-        ||`<div class="drv"><span class="dot" style="background:var(--grass-dim)"></span><div><div class="drv-t">Nothing beyond his own power is moving this one — neutral park, league-average pitcher.</div></div></div>`;
+        ||`<div class="drv"><span class="dot" style="background:var(--grass-dim)"></span><div><div class="drv-t">Nothing beyond his own power is moving this one. Neutral park, league-average pitcher.</div></div></div>`;
       kn.length=0;
-      kn.push(`<div class="kn"><span class="kl">Homer rate<span class="kh">share of his trips to the plate that end in a homer — league is ~${(LGRATE.hr*100).toFixed(1)}%</span></span><span class="kv amber">${rateTxt}%</span></div>`);
+      kn.push(`<div class="kn"><span class="kl">Homer rate<span class="kh">share of his plate trips that end in a homer. League is about ${(LGRATE.hr*100).toFixed(1)}%</span></span><span class="kv amber">${rateTxt}%</span></div>`);
       kn.push(`<div class="kn"><span class="kl">Season power<span class="kh">home runs this year, and slugging for context (slugging isn't scored)</span></span><span class="kv">${c.hr} HR · ${(c.slg||0).toFixed(3)} SLG</span></div>`);
-      if(hb.pitRel!=null)kn.push(`<div class="kn"><span class="kl">SP HR tendency<span class="kh">homers SP ${nm} allows vs league — above 1.00× is gopher-prone</span></span><span class="kv">${hb.pitRel.toFixed(2)}×</span></div>`);
+      if(hb.pitRel!=null)kn.push(`<div class="kn"><span class="kl">SP HR tendency<span class="kh">homers SP ${nm} allows vs league. Above 1.00x means gopher-prone</span></span><span class="kv">${hb.pitRel.toFixed(2)}×</span></div>`);
       kn.push(`<div class="kn"><span class="kl">Park HR factor<span class="kh">how this ballpark treats home runs vs average</span></span><span class="kv">${hb.park.toFixed(2)}×</span></div>`);
       kn.push(`<div class="kn"><span class="kl">HR chance today<span class="kh">chance of at least one homer, over ~${expPA(c).toFixed(1)} trips</span></span><span class="kv">${((c.hrProb||0)*100).toFixed(1)}%</span></div>`);
       track="";

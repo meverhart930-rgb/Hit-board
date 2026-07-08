@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Live Box — Honky Jefe's Hit List</title>
+<title>Live Box, Honky Jefe's Hit List</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:ital,wght@0,400;0,600;0,800;0,900&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -112,7 +112,7 @@
   <div id="status" class="status">Loading your tracked players…</div>
   <div class="grid" id="grid"></div>
 
-  <footer>Game state and scores come from the MLB schedule; batting lines from each game's box score. Players who didn't start show as Did not start. A postponed game kills any bet on that player — watch the rail color and pill.</footer>
+  <footer>Game state and scores come from the MLB schedule, and batting lines come from each game's box score. Players who didn't start show as Did not start. A postponed game kills any bet on that player, so watch the rail color and the pill.</footer>
 </div>
 
 <script>
@@ -166,7 +166,7 @@ async function pool(items,fn,conc=5){
 async function refresh(){
   if(timer){clearTimeout(timer);timer=null;}
   if(!TRACKED.length){
-    setStatus("No tracked players yet. Head to the <a href='index.html'>board</a>, build it, then come back — your top 10 will appear here automatically.");
+    setStatus("No tracked players yet. Head to the <a href='index.html'>main page</a>, generate a list, then come back. Your top 10 will appear here automatically.");
     return;
   }
   try{
@@ -202,7 +202,7 @@ async function refresh(){
     else if(AUTO && !anyLive && finalN<TRACKED.length){ timer=setTimeout(refresh,120000); } // pregame: slow poll
   }catch(e){
     console.error(e);
-    setStatus("Couldn't reach the live feed — a source may be down or your connection blocked it. Try <b>Refresh now</b> in a moment.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
+    setStatus("Couldn't reach the live feed. A source may be down, or your connection blocked it. Try <b>Refresh now</b> in a moment.<br><br><span style='color:var(--muted)'>"+(e.message||e)+"</span>",true);
   }
 }
 
@@ -232,7 +232,7 @@ function gamePill(g){
 
 function render(boxes){
   const grid=els("grid");grid.innerHTML="";
-  if(!TRACKED.length){grid.innerHTML='<div class="sub" style="padding:10px 2px">'+(LVMODE==="hr"?"No Homerun picks yet — generate a list on the main page, then come back.":"No Hit picks yet — generate a list on the main page first.")+'</div>';return;}
+  if(!TRACKED.length){grid.innerHTML='<div class="sub" style="padding:10px 2px">'+(LVMODE==="hr"?"No Homerun picks yet. Generate a list on the main page, then come back.":"No Hit picks yet. Generate a list on the main page first.")+'</div>';return;}
   TRACKED.forEach((p,i)=>{
     const g=p._game;
     const st=g?.status?.abstractGameState;
