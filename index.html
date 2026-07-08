@@ -39,12 +39,13 @@
   .brand-kick{display:block;font-family:"Anton",sans-serif;font-size:clamp(20px,5.4vw,36px);letter-spacing:.24em;text-transform:uppercase;color:var(--chalk);opacity:.9;margin:0 0 0 2px}
   .brandrow{display:flex;align-items:flex-start;gap:16px;margin-top:4px;margin-bottom:14px}
   .logoframe{position:relative;flex:0 0 auto;display:flex;align-self:stretch;align-items:flex-start}
-  .logoframe::before{content:"";position:absolute;left:3%;right:3%;top:15%;bottom:0;border-radius:16px;
+  .logoframe::before{content:"";position:absolute;left:-3%;right:-3%;top:8%;bottom:-2%;border-radius:16px;
     background:linear-gradient(168deg,#ff6b7d 0%,#e4002b 42%,#74001a 100%);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 14px 34px rgba(0,0,0,.55),0 5px 18px rgba(228,0,43,.38)}
-  .brandlogo{height:clamp(210px,54vw,410px);width:auto;max-width:40vw;object-fit:contain;object-position:top center;display:block;position:relative;z-index:1;
-    border-radius:0 0 14px 14px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.45))}
+  .brandlogo{height:clamp(224px,55vw,440px);width:auto;max-width:40vw;object-fit:cover;object-position:top center;display:block;position:relative;z-index:1;
+    border-radius:14px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.45))}
   .brandtext{min-width:0}
+  @media (max-width:365px){h1.wordmark{font-size:13vw}.brandlogo{height:48vw;max-width:37vw}}
 
   h1.wordmark{font-family:"Anton","Archivo",sans-serif;font-weight:400;font-stretch:normal;text-transform:uppercase;letter-spacing:.006em;white-space:nowrap;display:inline-block;
     font-size:clamp(92px,25vw,190px);line-height:.86;margin:0 0 4px;color:var(--chalk);
@@ -254,7 +255,7 @@
 <div class="wrap">
   <header>
     <div class="brandrow">
-      <span class="logoframe"><img class="brandlogo" src="honky-jefe-cut.png" alt="Honky Jefe mascot" width="586" height="800"></span>
+      <span class="logoframe"><img class="brandlogo" src="mascot-tall.png" alt="El Jefe mascot" width="544" height="800"></span>
       <div class="brandtext">
         <span class="brand-kick">El Jefe's</span>
         <h1 class="wordmark"><img class="hitword" src="hit-word.png" alt="HIT" width="754" height="461"><br><span class="acc">List</span></h1>
