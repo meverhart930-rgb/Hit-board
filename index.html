@@ -37,13 +37,12 @@
   h1{font-family:"Archivo",sans-serif;font-weight:900;font-size:clamp(34px,7vw,60px);line-height:.92;letter-spacing:-.02em;margin:8px 0 6px;font-stretch:90%}
   h1 .acc{color:var(--amber)}
   .brand-kick{display:block;font-family:"Anton",sans-serif;font-size:clamp(20px,5.4vw,36px);letter-spacing:.24em;text-transform:uppercase;color:var(--chalk);opacity:.9;margin:0 0 0 2px}
-  .brandrow{display:flex;align-items:flex-start;gap:16px;margin-top:4px;margin-bottom:14px}
-  .leftcol{flex:0 0 auto;display:flex;flex-direction:column;gap:12px;width:clamp(150px,42vw,300px)}
+  .brandrow{display:grid;grid-template-columns:clamp(150px,42vw,300px) 1fr;align-items:center;gap:16px;margin-top:4px;margin-bottom:14px}
+  .leftcol{display:flex;flex-direction:column;min-width:0}
+  .brandtext{display:flex;flex-direction:column;min-width:0}
   .logoframe{position:relative;display:block;width:100%}
   .brandlogo{width:100%;height:auto;display:block;
     filter:drop-shadow(0 8px 22px rgba(0,0,0,.5)) drop-shadow(0 3px 10px rgba(228,0,43,.3))}
-  .leftcol .controls{margin:0}
-  .brandtext{flex:1 1 auto;min-width:0}
   @media (max-width:365px){h1.wordmark{font-size:13vw}}
 
   h1.wordmark{font-family:"Anton","Archivo",sans-serif;font-weight:400;font-stretch:normal;text-transform:uppercase;letter-spacing:.006em;white-space:nowrap;display:inline-block;
@@ -66,13 +65,14 @@
   h1.wordmark::after{content:"";display:block;width:100%;height:7px;background:var(--redsolid);border-radius:3px;margin-top:.16em;box-shadow:0 0 18px rgba(228,0,43,.45)}
   .sub{color:var(--muted);max-width:64ch;font-size:14.5px}
 
-  .controls{display:flex;flex-direction:column;gap:11px;align-items:stretch;margin:14px 0 0}
-  .field{display:flex;flex-direction:column;gap:6px}
+  .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;margin:14px 0 0}
+  .field{display:flex;flex-direction:column;gap:6px;min-width:0}
   .field label{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
   input[type=date],input[type=text]{background:var(--bg2);border:1px solid var(--line);color:var(--chalk);font-family:"IBM Plex Mono",monospace;font-size:14px;padding:11px 13px;border-radius:var(--radius);width:100%;text-align:left}
-  .controls .explainer{margin:0}
-  .controls>button.run{width:100%;justify-content:center;text-align:center}
-  .brandtext .livebtn{display:flex;width:clamp(160px,42vw,330px);margin:12px 0 0 2px}
+  .controls .explainer{margin:0;min-width:0}
+  .controls>button.run{justify-content:center;text-align:center}
+  .controls .explainer>button,.controls>button.run,.controls>.livebtn{width:100%;box-sizing:border-box}
+  .controls .livebtn{margin:0}
   button.run,a.livebtn{min-height:46px;white-space:nowrap;align-items:center;justify-content:center;text-align:center}
   input[type=text]{min-width:240px}
   button.run{background:var(--redsolid);color:#fff;border:none;cursor:pointer;font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:.02em;padding:11px 22px;border-radius:var(--radius);font-stretch:90%}
@@ -260,6 +260,13 @@
     <div class="brandrow">
       <div class="leftcol">
         <span class="logoframe"><img class="brandlogo" src="mascot-plated.png" alt="El Jefe mascot" width="814" height="1138"></span>
+      </div>
+      <div class="brandtext">
+        <span class="brand-kick">El Jefe's</span>
+        <h1 class="wordmark"><img class="hitword" src="hit-word.png" alt="HIT" width="754" height="461"><br><span class="acc">List</span></h1>
+        <img class="subsign" src="hr-sign.png" alt="and Homerun Predictor" width="700" height="456">
+      </div>
+    </div>
 
     <div class="controls">
       <div class="explainer">
@@ -279,14 +286,7 @@
         <input type="date" id="date" />
       </div>
       <button class="run" id="run">Generate Lists</button>
-    </div>
-      </div>
-      <div class="brandtext">
-        <span class="brand-kick">El Jefe's</span>
-        <h1 class="wordmark"><img class="hitword" src="hit-word.png" alt="HIT" width="754" height="461"><br><span class="acc">List</span></h1>
-        <img class="subsign" src="hr-sign.png" alt="and Homerun Predictor" width="700" height="456">
-        <a class="livebtn" id="liveLink" href="live.html">Live box scores →</a>
-      </div>
+      <a class="livebtn" id="liveLink" href="live.html">Live box scores →</a>
     </div>
 
     <div class="drawer" id="drawer" style="display:none" aria-hidden="true">
